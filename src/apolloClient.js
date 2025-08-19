@@ -12,7 +12,7 @@ const httpLink = new HttpLink({
 
 // Auth link for HTTP requests
 const authLink = setContext(async (_, { headers }) => {
-  const token = await nhost.auth.getAccessToken();
+  const token = nhost.auth.getAccessToken();
   return {
     headers: {
       ...headers,
@@ -26,7 +26,7 @@ const wsLink = new GraphQLWsLink(
   createClient({
     url: 'wss://nksnnulkutwrdcbohgct.hasura.ap-south-1.nhost.run/v1/graphql',
     connectionParams: async () => {
-      const token = await nhost.auth.getAccessToken();
+      const token = nhost.auth.getAccessToken();
       return {
         headers: {
           authorization: token ? `Bearer ${token}` : '',
