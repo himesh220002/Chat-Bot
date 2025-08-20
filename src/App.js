@@ -4,7 +4,7 @@ import nhost from './nhost.js';
 import AuthForm from './components/AuthForm.js';
 import ChatList from './components/chat/ChatList.js';
 import ChatWindow from './components/chat/ChatWindow.js';
-import { PanelRight, X } from "lucide-react";
+import { CircleEllipsis, X } from "lucide-react";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -82,7 +82,7 @@ function App() {
           onClick={() => setIsSidebarOpen(true)}
           className="lg:hidden fixed top-4 left-4 bg-gray-600 text-white p-1 px-2 rounded-md shadow-lg"
         >
-          <PanelRight size={24} />
+          <CircleEllipsis size={24} /> 
         </button>
       )}
     </div>

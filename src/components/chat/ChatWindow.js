@@ -143,7 +143,7 @@ export default function ChatWindow({ chatId, user }) {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex space-x-2">
+      <div className="flex flex-col md:flex-row gap-2 md:gap-0 space-x-0 md:space-x-2">
         <input
           type="text"
           placeholder="Type your message..."
