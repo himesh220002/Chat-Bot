@@ -7,7 +7,27 @@ import fetch from 'node-fetch';
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// Define allowed origins for CORS
+const allowedOrigins = [
+  'https://chat-bot-lake-chi.vercel.app',
+  'https://chat-bot-cypher.netlify.app',
+  'http://localhost:3000' // for local development/testing
+];
+
+// Configure CORS middleware with dynamic origin checking
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  }
+}));
+
 app.use(express.json());
 
 const openai = new OpenAI({
@@ -15,8 +35,6 @@ const openai = new OpenAI({
 });
 
 console.log('OpenAI Key:', process.env.OPENAI_API_KEY ? 'FOUND' : 'MISSING');
-
-
 
 app.get('/', (req, res) => {
   res.send('Backend API is running 🚀');
@@ -77,8 +95,6 @@ app.post('/generate-title', async (req, res) => {
       }
     `;
 
-   
-
     const response = await fetch(process.env.HASURA_GRAPHQL_ENDPOINT, {
       method: "POST",
       headers: {
@@ -104,7 +120,6 @@ app.post('/generate-title', async (req, res) => {
     res.status(500).json({ error: 'Chat title generation failed' });
   }
 });
-
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Not Found' });
