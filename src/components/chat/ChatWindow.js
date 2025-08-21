@@ -105,8 +105,8 @@ export default function ChatWindow({ chatId, user }) {
   if (error) return <p className="p-4 text-red-600">Error: {error.message}</p>;
 
   return (
-    <div className="flex flex-col h-full max-h-screen p-4 border rounded-none md:rounded-md shadow bg-white">
-      <div className="overflow-y-auto flex-grow pt-6 lg:pt-0 mb-4 max-h-[700px] sm640:max-h-full scrollbar-hide ">
+    <div className="flex flex-col h-full max-h-screen  p-4 border rounded-none sm640:rounded-md shadow bg-white">
+      <div className="overflow-y-auto flex-grow pt-6 lg:pt-0 mb-4 max-h-[600px] sm640:max-h-[620px] scrollbar-hide ">
         {messages.map(({ id, text, sender }) => (
           <div
             key={id}
