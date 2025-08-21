@@ -129,3 +129,16 @@ const port = process.env.BACKEND_PORT || 4000;
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
+
+
+// Keep-alive cron to prevent sleeping
+const SELF_URL = 'https://chat-bot-9xcz.onrender.com';
+
+setInterval(async () => {
+  try {
+    await fetch(SELF_URL);
+    console.log('Sent keep-alive ping');
+  } catch (err) {
+    console.error('Keep-alive ping failed:', err);
+  }
+}, 10 * 60 * 1000); // 10 minutes
