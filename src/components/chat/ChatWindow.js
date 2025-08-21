@@ -106,7 +106,7 @@ export default function ChatWindow({ chatId, user }) {
 
   return (
     <div className="flex flex-col h-full max-h-screen p-4 border rounded-none md:rounded-md shadow bg-white">
-      <div className="overflow-y-auto flex-grow pt-6 lg:pt-0 mb-4 max-h-[650px] sm640:max-h-full scrollbar-hide ">
+      <div className="overflow-y-auto flex-grow pt-6 lg:pt-0 mb-4 max-h-[600px] sm640:max-h-full scrollbar-hide ">
         {messages.map(({ id, text, sender }) => (
           <div
             key={id}
