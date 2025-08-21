@@ -1,3 +1,4 @@
+//components/chat/ChatWindow.js
 import React, { useState, useRef, useEffect } from 'react';
 import useChat from '../../hooks/useChat.js';
 import { Loader } from 'lucide-react';
