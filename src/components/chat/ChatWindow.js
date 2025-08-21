@@ -106,7 +106,7 @@ export default function ChatWindow({ chatId, user }) {
 
   return (
     <div className="flex flex-col h-full max-h-screen p-4 border rounded-none md:rounded-md shadow bg-white">
-      <div className="overflow-y-auto flex-grow pt-6 lg:pt-0 mb-4  scrollbar-hide ">
+      <div className="overflow-y-auto flex-grow pt-6 lg:pt-0 mb-4 max-h-[650px] sm640:max-h-full scrollbar-hide ">
         {messages.map(({ id, text, sender }) => (
           <div
             key={id}
@@ -144,18 +144,18 @@ export default function ChatWindow({ chatId, user }) {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex flex-col md:flex-row gap-2 md:gap-0 space-x-0 md:space-x-2">
+      <div className="flex flex-col sm640:flex-row items-center gap-2 md:gap-0 space-x-0 md:space-x-2">
         <input
           type="text"
           placeholder="Type your message..."
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
-          className="flex-grow border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-grow w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           onClick={handleSend}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-6 py-2 font-semibold transition"
+          className="bg-blue-600 w-20 hover:bg-blue-700 text-white rounded-md px-6 py-2 font-semibold transition"
         >
           Send
         </button>
