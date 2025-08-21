@@ -12,11 +12,11 @@ It allows users to chat with an AI assistant, with features like session titles 
   - Apollo Client (GraphQL integration)
   - Nhost (auth & database)
 - **Backend**
-  - Vercel Serverless Functions (`api/` folder)
+  - Render Serverless Functions (`api/` folder)
   - OpenAI API for generating replies & titles
 - **Deployment**
   - Frontend → Netlify
-  - Backend → Vercel
+  - Backend → Render
 
 ---
 
@@ -64,8 +64,8 @@ Backend (API)
   2. Import to Vercel  
   3. Add OPENAI_API_KEY in Vercel environment settings  
   4. Your endpoints will be:    
-      https://your-backend.vercel.app/api/generate-reply  
-      https://your-backend.vercel.app/api/generate-title
+      https://your-backend.render.app/api/generate-reply  
+      https://your-backend.render.app/api/generate-title
 
 ---
 
@@ -73,7 +73,7 @@ Backend (API)
 
 Request  
 
-POST https://your-backend.vercel.app/api/generate-reply  
+POST https://your-backend.render.app/api/generate-reply  
 Content-Type: application/json  
 
 {  
@@ -94,7 +94,7 @@ Responce
 - ✅ **Real-time Chat** – powered by GraphQL subscriptions  
 - ✅ **AI-generated Responses** – using OpenAI GPT models  
 - ✅ **Automatic Chat Title Generation** – titles created dynamically from chat context  
-- ✅ **Seamless Deployment** – frontend on Netlify & backend on Vercel  
+- ✅ **Seamless Deployment** – frontend on Netlify & backend on Render  
 
 ---
 
