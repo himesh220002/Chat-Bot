@@ -64,7 +64,8 @@ function App() {
       </aside>
 
       {/* Main chat window */}
-      <main className="flex-grow bg-cyan-900 shadow-inner  p-3 w-full lg:w-3/4">
+      <main className="flex-grow bg-cyan-900 shadow-inner  p-0 md:p-3 w-full lg:w-3/4">
+      
         {selectedChat ? (
           <ChatWindow chatId={selectedChat} user={user} />
         ) : (
@@ -80,7 +81,7 @@ function App() {
       {!isSidebarOpen && (
         <button
           onClick={() => setIsSidebarOpen(true)}
-          className="lg:hidden fixed top-4 left-4 bg-gray-600 text-white p-1 px-2 rounded-md shadow-lg"
+          className="lg:hidden fixed top-2 md:top-4 left-2 md:left-4 bg-gray-600 text-white p-1 px-2 rounded-md shadow-lg"
         >
           <CircleEllipsis size={24} /> 
         </button>

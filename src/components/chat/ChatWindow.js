@@ -105,8 +105,8 @@ export default function ChatWindow({ chatId, user }) {
   if (error) return <p className="p-4 text-red-600">Error: {error.message}</p>;
 
   return (
-    <div className="flex flex-col h-full max-h-[800px] p-4 border rounded-md shadow bg-white">
-      <div className="overflow-y-auto flex-grow mb-4 max-h-[600px] scrollbar-hide ">
+    <div className="flex flex-col h-full max-h-screen p-4 border rounded-none md:rounded-md shadow bg-white">
+      <div className="overflow-y-auto flex-grow pt-6 lg:pt-0 mb-4  scrollbar-hide ">
         {messages.map(({ id, text, sender }) => (
           <div
             key={id}
@@ -118,7 +118,7 @@ export default function ChatWindow({ chatId, user }) {
               </div>
             )}
             <div
-              className={`max-w-[75%] px-4 py-2 rounded-lg break-words ${sender === 'user'
+              className={`max-w-[85%] px-4 py-2 rounded-lg break-words ${sender === 'user'
                   ? 'bg-blue-600 text-white rounded-br-none shadow'
                   : 'bg-gray-200 text-gray-900 rounded-bl-none'
                 }`}
