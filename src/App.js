@@ -4,7 +4,7 @@ import nhost from './nhost.js';
 import AuthForm from './components/AuthForm.js';
 import ChatList from './components/chat/ChatList.js';
 import ChatWindow from './components/chat/ChatWindow.js';
-import { SquareChevronRight, X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -82,9 +82,9 @@ function App() {
       {!isSidebarOpen && (
         <button
           onClick={() => setIsSidebarOpen(true)}
-          className="lg:hidden fixed top-2 md:top-4 left-2 md:left-4 bg-gray-600 text-white p-1 px-2 rounded-md shadow-lg"
+          className="lg:hidden fixed top-2 md:top-4 left-2 md:left-4 bg-gray-900 bg-opacity-30 text-gray-200 p-1 pl-2 rounded-lg shadow-lg"
         >
-          <div className='flex gap-2'>Menu <SquareChevronRight size={24} /> </div>
+          <div className='flex gap-2'>Menu <ChevronRight size={24} /> </div>
         </button>
       )}
     </div>

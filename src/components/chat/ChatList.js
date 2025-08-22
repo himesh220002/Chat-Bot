@@ -118,7 +118,7 @@ export default function ChatList({ onSelectChat, user, currentChatId }) {
                 Delete
               </button>
               {confirmDelete && (
-                <div className="absolute  mt-2 bg-gray-700 text-white rounded-md shadow-lg p-2 flex gap-2">
+                <div className="absolute  mt-0 bg-gray-700 text-white rounded-md shadow-lg p-2 flex gap-2">
                   <button
                     onClick={handleDeleteSelected}
                     className="px-3 py-1 bg-red-500 hover:bg-red-700 rounded-md"
