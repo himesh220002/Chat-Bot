@@ -24,13 +24,13 @@ It allows users to chat with an AI assistant, with features like session titles 
 ## ⚙️ Setup & Installation
 
 ### 1️⃣ Clone the repo
-```bash```
+```bash```  
 git clone https://github.com/your-username/chatbotai.git  
 cd chatbotai
 
 
 ## Install dependencies
-```bash```
+```bash```  
 npm install
 
 For backend (inside api/):  
@@ -48,7 +48,7 @@ REACT_APP_NHOST_REGION=your-nhost-region
 Backend (.env):  
 OPENAI_API_KEY=sk-xxxxxx
 
-```bash```
+```bash```  
 npm start
 
 ---
