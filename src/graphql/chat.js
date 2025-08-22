@@ -67,3 +67,10 @@ export const MESSAGES_SUBSCRIPTION = gql`
   }
 `;
 
+export const DELETE_CHAT = gql`
+  mutation DeleteChat($id: uuid!) {
+    delete_chats(where: { id: { _eq: $id } }) {
+      affected_rows
+    }
+  }
+`;
