@@ -4,7 +4,7 @@ import nhost from './nhost.js';
 import AuthForm from './components/AuthForm.js';
 import ChatList from './components/chat/ChatList.js';
 import ChatWindow from './components/chat/ChatWindow.js';
-import { CircleEllipsis, X } from "lucide-react";
+import { SquareChevronRight, X } from "lucide-react";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -60,6 +60,7 @@ function App() {
             setIsSidebarOpen(false);
           }}
           user={user}
+          currentChatId={selectedChat}
         />
       </aside>
 
@@ -83,7 +84,7 @@ function App() {
           onClick={() => setIsSidebarOpen(true)}
           className="lg:hidden fixed top-2 md:top-4 left-2 md:left-4 bg-gray-600 text-white p-1 px-2 rounded-md shadow-lg"
         >
-          <CircleEllipsis size={24} /> 
+          <div className='flex gap-2'>Menu <SquareChevronRight size={24} /> </div>
         </button>
       )}
     </div>
