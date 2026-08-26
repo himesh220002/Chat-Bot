@@ -1,91 +1,88 @@
-// src/App.js
-import React, { useState, useEffect } from 'react';
-import nhost from './nhost.js';
-import AuthForm from './components/AuthForm.js';
-import ChatList from './components/chat/ChatList.js';
-import ChatWindow from './components/chat/ChatWindow.js';
-import { ChevronRight, X } from "lucide-react";
+import React, { useState } from 'react';
+import { useAuth } from './context/AuthContext';
+import AuthForm from './components/AuthForm';
+import ChatList from './components/chat/ChatList';
+import ChatWindow from './components/chat/ChatWindow';
+import { Menu, X } from "lucide-react";
 
 function App() {
-  const [user, setUser] = useState(null);
+  const { user, loading } = useAuth();
   const [selectedChat, setSelectedChat] = useState(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    const session = nhost.auth.getSession();
-    if (session) setUser(session.user);
-    setLoadingAuth(false);
-
-    return nhost.auth.onAuthStateChanged((event, session) => {
-      if (session) setUser(session.user);
-      else setUser(null);
-      setLoadingAuth(false);
-    });
-  }, []);
-
-  if (loadingAuth) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500">Loading...</p>
+      <div className="flex items-center justify-center min-h-screen bg-zinc-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-zinc-900"></div>
       </div>
     );
   }
 
   if (!user) {
-    return <AuthForm onAuthSuccess={setUser} />;
+    return <AuthForm />;
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 relative">
+    <div className="flex h-screen bg-white text-zinc-900 font-sans overflow-hidden">
+      
       {/* Sidebar (Chat List) */}
       <aside
-        className={`fixed lg:static top-0 left-0 h-screen lg:h-auto lg:min-h-screen w-3/4 max-w-xs bg-gray-800 shadow-lg p-4 flex flex-col transform transition-transform duration-300 z-50
+        className={`fixed lg:static top-0 left-0 h-full w-72 bg-zinc-50 border-r border-zinc-200 flex flex-col transform transition-transform duration-300 ease-in-out z-40
         ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
-        {/* Close button (only on mobile) */}
-        <div className="lg:hidden flex justify-end mb-2">
-          <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-white">
-            <X size={24} />
+        <div className="p-5 flex items-center justify-between border-b border-zinc-200">
+          <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+            <span className="w-6 h-6 rounded bg-zinc-900 text-white flex items-center justify-center text-sm font-bold shadow-sm">C</span>
+            ChatVerse
+          </h2>
+          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-1.5 text-zinc-500 hover:text-zinc-900 rounded-md hover:bg-zinc-200 transition-colors">
+            <X size={20} />
           </button>
         </div>
-
-        <h2 className="text-xl font-bold mb-4 text-cyan-400 flex items-center gap-2">
-          ✨ ChatVerse
-        </h2>
 
         <ChatList
           onSelectChat={(id) => {
             setSelectedChat(id);
             setIsSidebarOpen(false);
           }}
-          user={user}
           currentChatId={selectedChat}
         />
       </aside>
 
       {/* Main chat window */}
-      <main className="flex-grow bg-cyan-900 shadow-inner  p-0 md:p-3 w-full lg:w-3/4">
-      
+      <main className="flex-1 flex flex-col relative h-full">
+        {/* Mobile Header */}
+        {!isSidebarOpen && (
+          <div className="lg:hidden flex items-center p-3 border-b border-zinc-200 bg-white sticky top-0 z-30">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors"
+            >
+              <Menu size={20} />
+            </button>
+            <span className="ml-2 font-medium">Menu</span>
+          </div>
+        )}
+
         {selectedChat ? (
-          <ChatWindow chatId={selectedChat} user={user} />
+          <ChatWindow chatId={selectedChat} />
         ) : (
-          <div className="text-center text-gray-200 space-y-2 p-6">
-            <p className="text-2xl font-semibold">💬 Welcome to ChatApp</p>
-            <p className="text-lg">Select a chat from the sidebar to start</p>
-            <p className="text-sm opacity-70">or create a new one!</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-white animate-fade-in">
+            <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-zinc-200 text-zinc-400">
+              <Menu size={32} />
+            </div>
+            <h3 className="text-2xl font-semibold tracking-tight text-zinc-900 mb-2">How can I help you today?</h3>
+            <p className="text-zinc-500 max-w-sm">Select an existing conversation from the sidebar or start a new chat to begin.</p>
           </div>
         )}
       </main>
 
-      {/* Floating open button (mobile only) */}
-      {!isSidebarOpen && (
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          className="lg:hidden fixed top-2 md:top-4 left-2 md:left-4 bg-gray-900 bg-opacity-30 text-gray-200 p-1 pl-2 rounded-lg shadow-lg"
-        >
-          <div className='flex gap-2'>Menu <ChevronRight size={24} /> </div>
-        </button>
+      {/* Mobile overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-zinc-900/20 backdrop-blur-sm z-30 lg:hidden transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
       )}
     </div>
   );

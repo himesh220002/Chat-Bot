@@ -2,23 +2,26 @@ import express from 'express';
 import cors from 'cors';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
-import fetch from 'node-fetch';
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+// Import Models
+import User from './src/models/User.js';
+import Chat from './src/models/Chat.js';
+import Message from './src/models/Message.js';
 
 dotenv.config();
 
 const app = express();
 
-// Define allowed origins for CORS
 const allowedOrigins = [
-  'https://chat-bot-lake-chi.vercel.app',
-  'https://chat-bot-cypher.netlify.app',
-  'http://localhost:3000' // for local development/testing
+  'http://localhost:3000',
+  'http://localhost:3001',
 ];
 
-// Configure CORS middleware with dynamic origin checking
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like curl, Postman)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) === -1) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -30,115 +33,189 @@ app.use(cors({
 
 app.use(express.json());
 
+// MongoDB Connection
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/chatbot';
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
+
+// NVIDIA API Integration via OpenAI SDK
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.NVIDIA_API_KEY || 'dummy_key_to_prevent_crash_during_startup',
+  baseURL: 'https://integrate.api.nvidia.com/v1',
 });
 
-console.log('OpenAI Key:', process.env.OPENAI_API_KEY ? 'FOUND' : 'MISSING');
+// Middleware for JWT Verification
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (token == null) return res.sendStatus(401);
 
-app.get('/', (req, res) => {
-  res.send('Backend API is running 🚀');
-});
+  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_for_local_dev', (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+};
 
-// AI reply route
-app.post('/generate-reply', async (req, res) => {
-  const { message } = req.body;
+app.get('/', (req, res) => res.send('Backend API is running 🚀'));
 
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' });
-  }
-
+// --- AUTH ROUTES ---
+app.post('/api/auth/signup', async (req, res) => {
   try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return res.status(400).json({ error: 'User already exists' });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ email, password: hashedPassword });
+    await user.save();
+
+    const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET || 'fallback_secret_for_local_dev', { expiresIn: '7d' });
+    res.json({ token, user: { id: user._id, email: user.email } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Signup failed' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) return res.status(400).json({ error: 'Invalid credentials' });
+
+    const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET || 'fallback_secret_for_local_dev', { expiresIn: '7d' });
+    res.json({ token, user: { id: user._id, email: user.email } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// --- CHAT ROUTES ---
+app.get('/api/chats', authenticateToken, async (req, res) => {
+  try {
+    const chats = await Chat.find({ user_id: req.user.userId }).sort({ createdAt: -1 });
+    res.json(chats);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch chats' });
+  }
+});
+
+app.post('/api/chats', authenticateToken, async (req, res) => {
+  try {
+    const chat = new Chat({ user_id: req.user.userId, title: 'New Chat' });
+    await chat.save();
+    res.json(chat);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create chat' });
+  }
+});
+
+app.delete('/api/chats/:id', authenticateToken, async (req, res) => {
+  try {
+    await Chat.findOneAndDelete({ _id: req.params.id, user_id: req.user.userId });
+    await Message.deleteMany({ chat_id: req.params.id });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete chat' });
+  }
+});
+
+app.put('/api/chats/:id', authenticateToken, async (req, res) => {
+  try {
+    const chat = await Chat.findOneAndUpdate(
+      { _id: req.params.id, user_id: req.user.userId },
+      { title: req.body.title },
+      { new: true }
+    );
+    res.json(chat);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update chat' });
+  }
+});
+
+// --- MESSAGE ROUTES ---
+app.get('/api/chats/:id/messages', authenticateToken, async (req, res) => {
+  try {
+    const messages = await Message.find({ chat_id: req.params.id, user_id: req.user.userId }).sort({ createdAt: 1 });
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
+  try {
+    const { content } = req.body;
+    const chatId = req.params.id;
+
+    // Save user message
+    const userMessage = new Message({
+      chat_id: chatId,
+      user_id: req.user.userId,
+      message: content,
+      role: 'user'
+    });
+    await userMessage.save();
+
+    // Generate Title if it's the first message
+    const messageCount = await Message.countDocuments({ chat_id: chatId });
+    if (messageCount === 1) {
+      try {
+        const titleCompletion = await openai.chat.completions.create({
+          model: "meta/llama-3.2-11b-vision-instruct",
+          messages: [
+            { role: "system", content: "Generate a short, descriptive title for a chat (max 5 words). Do not use quotes." },
+            { role: "user", content: content },
+          ],
+        });
+        const title = titleCompletion.choices[0].message.content.trim();
+        await Chat.findByIdAndUpdate(chatId, { title });
+      } catch (err) {
+         console.error('Failed to generate title', err);
+      }
+    }
+
+    // Fetch previous context
+    const recentMessages = await Message.find({ chat_id: chatId }).sort({ createdAt: 1 }).limit(10);
+    const messagesForAI = recentMessages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: msg.message
+    }));
+
+    // Call NVIDIA Model
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: message }],
+      model: "meta/llama-3.2-11b-vision-instruct",
+      messages: messagesForAI,
     });
 
     const botReply = completion.choices[0].message.content;
-    res.json({ reply: botReply });
-  } catch (error) {
-    if (error.code === 'insufficient_quota' || error.status === 429) {
-      res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
-    } else {
-      console.error('Error during OpenAI API call:', error);
-      res.status(500).json({ error: 'AI reply generation failed' });
-    }
-  }
-});
 
-app.post('/generate-title', async (req, res) => {
-  const { chatId, firstMessage } = req.body;
-
-  if (!chatId || !firstMessage) {
-    return res.status(400).json({ error: 'chatId and firstMessage are required' });
-  }
-
-  try {
-    // Generate a title
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "Generate a short, descriptive title for a chat (max 5 words)." },
-        { role: "user", content: firstMessage },
-      ],
+    // Save bot message
+    const botMessage = new Message({
+      chat_id: chatId,
+      user_id: req.user.userId,
+      message: botReply,
+      role: 'assistant'
     });
+    await botMessage.save();
 
-    const title = completion.choices[0].message.content.trim();
-
-    // Save the title in Hasura (GraphQL mutation)
-    const mutation = `
-      mutation UpdateChatTitle($chatId: uuid!, $title: String!) {
-        update_chats_by_pk(pk_columns: { id: $chatId }, _set: { title: $title }) {
-          id
-          title
-        }
-      }
-    `;
-
-    const response = await fetch(process.env.HASURA_GRAPHQL_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-hasura-admin-secret": process.env.HASURA_ADMIN_SECRET,
-      },
-      body: JSON.stringify({
-        query: mutation,
-        variables: { chatId, title },
-      }),
-    });
-
-    const result = await response.json();
-
-    if (result.errors) {
-      console.error(result.errors);
-      return res.status(500).json({ error: 'Failed to update chat title' });
-    }
-
-    res.json({ chatId, title });
+    res.json({ userMessage, botMessage });
   } catch (error) {
-    console.error('Error generating chat title:', error);
-    res.status(500).json({ error: 'Chat title generation failed' });
+    console.error(error);
+    res.status(500).json({ error: 'AI reply generation failed' });
   }
-});
-
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not Found' });
 });
 
 const port = process.env.BACKEND_PORT || 4000;
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
-
-
-// Keep-alive cron to prevent sleeping
-const SELF_URL = 'https://chat-bot-9xcz.onrender.com';
-
-setInterval(async () => {
-  try {
-    await fetch(SELF_URL);
-    console.log('Sent keep-alive ping');
-  } catch (err) {
-    console.error('Keep-alive ping failed:', err);
-  }
-}, 10 * 60 * 1000); // 10 minutes
