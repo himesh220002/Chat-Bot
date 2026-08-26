@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Distance Calculator</title>
+    <style>
+        #canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <p id="distance"></p>
+    <script src="https://cdn.jsdelivr.net/npm/deepseek@4.0.0/dist/deepseek.min.js"></script>
+    <script>
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext('2d');
+        var points = [];
+        var isDrawing = false;
+        var lastPoint = null;
+        canvas.addEventListener('mousedown', function (e) {
+            isDrawing = true;
+            points.push({ x: e.clientX, y: e.clientY });
+            if (points.length > 2) {
+                points.shift();
+            }
+            lastPoint = { x: e.clientX, y: e.clientY };
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (var i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(lastPoint.x, lastPoint.y, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+        canvas.addEventListener('mousemove', function (e) {
+            if (isDrawing) {
+                points.push({ x: e.clientX, y: e.clientY });
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (var i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(lastPoint.x, lastPoint.y, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        });
+        canvas.addEventListener('mouseup', function () {
+            isDrawing = false;
+            calculateDistance();
+        });
+        function calculateDistance() {
+            var distance = 0;
+            for (var i = 0; i < points.length - 1; i++) {
+                var x1 = points[i].x;
+                var y1 = points[i].y;
+                var x2 = points[i + 1].x;
+                var y2 = points[i + 1].y;
+                var dx = x2 - x1;
+                var dy = y2 - y1;
+                var d = Math.sqrt(dx * dx + dy * dy);
+                distance += d;
+            }
+            var px = distance;
+            document.getElementById('distance').innerHTML = 'Distance: ' + px.toFixed(2) + ' px';
+        }
+    </script>
+</body>
+
+</html>

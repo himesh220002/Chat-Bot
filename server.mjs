@@ -154,8 +154,9 @@ app.get('/api/chats/:id/messages', authenticateToken, async (req, res) => {
 
 app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, model } = req.body;
     const chatId = req.params.id;
+    console.log(`[DEBUG] Received chat request for model: ${model}`);
 
     // Save user message
     const userMessage = new Message({
@@ -184,6 +185,13 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
       }
     }
 
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    
+    // Send user message confirmation immediately
+    res.write(`data: ${JSON.stringify({ type: 'user_message', userMessage })}\n\n`);
+
     // Fetch previous context
     const recentMessages = await Message.find({ chat_id: chatId }).sort({ createdAt: 1 }).limit(10);
     const messagesForAI = recentMessages.map(msg => ({
@@ -191,27 +199,106 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
       content: msg.message
     }));
 
-    // Call NVIDIA Model
-    const completion = await openai.chat.completions.create({
-      model: "meta/llama-3.2-11b-vision-instruct",
-      messages: messagesForAI,
-    });
+    // Call AI Model
+    let completion;
+    try {
+      if (model === 'local-gguf') {
+        console.log(`[DEBUG] Routing to local LM Studio for model: ${model}`);
+        const localOpenAI = new OpenAI({
+          apiKey: 'ollama',
+          baseURL: 'http://localhost:11434/v1' // Ollama default port
+        });
+        completion = await localOpenAI.chat.completions.create({
+          model: "qwen2.5-coder:7b", // Ollama requires the exact model name including the tag
+          messages: messagesForAI,
+          stream: true,
+        });
+      } else {
+        const targetModel = model || "meta/llama-3.2-11b-vision-instruct";
+        console.log(`[DEBUG] Routing to NVIDIA API for model: ${targetModel}`);
+        completion = await openai.chat.completions.create({
+          model: targetModel,
+          messages: messagesForAI,
+          stream: true,
+        });
+      }
 
-    const botReply = completion.choices[0].message.content;
+      let botReply = '';
+      for await (const chunk of completion) {
+        const delta = chunk.choices[0]?.delta?.content || '';
+        if (delta) {
+          botReply += delta;
+          res.write(`data: ${JSON.stringify({ type: 'chunk', text: delta })}\n\n`);
+        }
+      }
 
-    // Save bot message
-    const botMessage = new Message({
-      chat_id: chatId,
-      user_id: req.user.userId,
-      message: botReply,
-      role: 'assistant'
-    });
-    await botMessage.save();
+      // Handle empty bot reply (e.g. due to context limit exceeded in local models)
+      if (!botReply || botReply.trim() === '') {
+        botReply = "⚠️ **Generation Failed**\n\nThe AI model did not return any response. This usually happens if the conversation has exceeded the model's maximum context limit (e.g. 4096 tokens for this local model). Please start a new chat or shorten your prompt.";
+        res.write(`data: ${JSON.stringify({ type: 'chunk', text: botReply })}\n\n`);
+      }
 
-    res.json({ userMessage, botMessage });
+      // Log snippet to terminal
+      const snippet = botReply.length > 50 ? botReply.substring(0, 50).replace(/\n/g, ' ') + '...' : botReply.replace(/\n/g, ' ');
+      const logModelName = model || "meta/llama-3.2-11b-vision-instruct";
+      console.log(`\n🤖 [AI GENERATED] ${logModelName}: ${snippet} generated\n`);
+
+      // Save bot message
+      const botMessage = new Message({
+        chat_id: chatId,
+        user_id: req.user.userId,
+        message: botReply,
+        role: 'assistant'
+      });
+      await botMessage.save();
+      
+      res.write(`data: ${JSON.stringify({ type: 'done', botMessage })}\n\n`);
+      res.end();
+
+    } catch (apiError) {
+      if (apiError.status === 404) {
+        console.error(`[DEBUG] Model ${model} is currently unavailable on NVIDIA API (404)`);
+        const botMessage = new Message({
+          chat_id: chatId,
+          user_id: req.user.userId,
+          message: `⚠️ **Model Unavailable**\n\nThe AI model \`${model}\` is currently offline or unavailable on the NVIDIA API servers. Please try selecting a different model from the dropdown.`,
+          role: 'assistant'
+        });
+        await botMessage.save();
+        res.write(`data: ${JSON.stringify({ type: 'error', botMessage })}\n\n`);
+        res.end();
+      } else if (apiError.code === 'ECONNREFUSED' && model === 'local-gguf') {
+        const botMessage = new Message({
+          chat_id: chatId,
+          user_id: req.user.userId,
+          message: `⚠️ **Local Server Not Running**\n\nCould not connect to Ollama on \`http://localhost:11434\`. Please make sure Ollama is running and your model is loaded.`,
+          role: 'assistant'
+        });
+        await botMessage.save();
+        res.write(`data: ${JSON.stringify({ type: 'error', botMessage })}\n\n`);
+        res.end();
+      } else {
+        console.error("API Error during streaming:", apiError);
+        res.write(`data: ${JSON.stringify({ type: 'error_fatal' })}\n\n`);
+        res.end();
+      }
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'AI reply generation failed' });
+  }
+});
+
+app.get('/api/ollama/status', async (req, res) => {
+  try {
+    // The native fetch API is available in Node.js 18+
+    const response = await fetch('http://localhost:11434/');
+    if (response.ok) {
+      return res.json({ status: 'online' });
+    }
+    return res.json({ status: 'offline' });
+  } catch (error) {
+    return res.json({ status: 'offline' });
   }
 });
 

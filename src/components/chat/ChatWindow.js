@@ -1,14 +1,58 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Loader2, Bot, User as UserIcon } from "lucide-react";
+import { Send, Loader2, Bot, User as UserIcon, ChevronDown } from "lucide-react";
 
 const API_URL = "http://localhost:4000/api";
+
+const AI_MODELS = [
+  { id: "meta/llama-3.2-11b-vision-instruct", name: "Llama 3.2 11B Vision" },
+  { id: "deepseek-ai/deepseek-v4-flash-0731", name: "DeepSeek V4 Flash" },
+  { id: "nvidia/nemotron-3.5-lightning-30b-a3b", name: "Nemotron 3.5 Lightning" },
+  { id: "meta/muse-glimmer-30b", name: "Muse Glimmer 30B" },
+  { id: "minimaxai/minimax-m3", name: "MiniMax M3 Preview" },
+  { id: "stepfun-ai/step-3.7-flash", name: "Step 3.7 Flash" },
+  { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", name: "Nemotron 3 Nano Omni" },
+  { id: "nvidia/ising-calibration-1.5-31b", name: "Ising Calibration 1.5" },
+  { id: "poolside/laguna-xs-2.1", name: "Laguna XS 2.1" },
+  { id: "google/diffusiongemma-26b-a4b-it", name: "DiffusionGemma 26B" },
+  { id: "local-gguf", name: "Local Model (LM Studio/Ollama)" }
+];
 
 const ChatWindow = ({ chatId }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState("");
+  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem("selectedModelId") || AI_MODELS[0].id);
+  const [localServerStatus, setLocalServerStatus] = useState('checking');
   const messagesEndRef = useRef(null);
+  const abortControllerRef = useRef(null);
+
+  // Calculate approximate tokens of last 10 messages (matching backend limit)
+  const last10Messages = messages.slice(-10);
+  const tokenCount = Math.ceil(last10Messages.reduce((acc, msg) => acc + (msg.message || '').split(/\s+/).length, 0) * 1.3);
+  const tokenPercentage = Math.min((tokenCount / 4096) * 100, 100);
+
+  useEffect(() => {
+    localStorage.setItem("selectedModelId", selectedModel);
+    
+    if (selectedModel === 'local-gguf') {
+      const checkStatus = async () => {
+        try {
+          const res = await fetch(`${API_URL}/ollama/status`);
+          const data = await res.json();
+          setLocalServerStatus(data.status);
+        } catch (e) {
+          setLocalServerStatus('offline');
+        }
+      };
+      
+      setLocalServerStatus('checking');
+      checkStatus();
+      const interval = setInterval(checkStatus, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedModel]);
 
   const fetchMessages = useCallback(async () => {
     setLoading(true);
@@ -43,6 +87,9 @@ const ChatWindow = ({ chatId }) => {
     const userMessageContent = newMessage.trim();
     setNewMessage("");
     setSending(true);
+    setStreamingMessage("");
+
+    abortControllerRef.current = new AbortController();
 
     const optimisticUserMsg = {
       _id: Date.now().toString(),
@@ -60,23 +107,77 @@ const ChatWindow = ({ chatId }) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ content: userMessageContent })
+        body: JSON.stringify({ content: userMessageContent, model: selectedModel }),
+        signal: abortControllerRef.current.signal
       });
       
-      if (res.ok) {
-        const data = await res.json();
-        setMessages((prev) => {
-          const filtered = prev.filter(m => m._id !== optimisticUserMsg._id);
-          return [...filtered, data.userMessage, data.botMessage];
-        });
-      } else {
-         setMessages((prev) => prev.filter(m => m._id !== optimisticUserMsg._id));
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let partialLine = '';
+      let currentStreamText = '';
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        if (value) {
+          const chunkString = decoder.decode(value, { stream: true });
+          const lines = (partialLine + chunkString).split('\n');
+          
+          partialLine = lines.pop(); // Keep the last incomplete line for the next chunk
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.replace('data: ', '').trim();
+              if (!dataStr) continue;
+              
+              try {
+                const data = JSON.parse(dataStr);
+                
+                if (data.type === 'user_message') {
+                  setMessages((prev) => {
+                    const filtered = prev.filter(m => m._id !== optimisticUserMsg._id);
+                    return [...filtered, data.userMessage];
+                  });
+                } else if (data.type === 'chunk') {
+                  currentStreamText += data.text;
+                  setStreamingMessage(currentStreamText);
+                } else if (data.type === 'done' || data.type === 'error') {
+                  setMessages((prev) => [...prev, data.botMessage]);
+                  setStreamingMessage("");
+                  currentStreamText = '';
+                }
+              } catch (e) {
+                console.error("Error parsing SSE JSON:", e, "Data string:", dataStr);
+              }
+            }
+          }
+        }
       }
     } catch (err) {
-      console.error("Failed to send message:", err);
-      setMessages((prev) => prev.filter(m => m._id !== optimisticUserMsg._id));
+      if (err.name === 'AbortError') {
+        console.log("Stream aborted by user.");
+        // Make the partial streaming message permanent
+        setMessages((prev) => {
+          const newMsg = {
+             _id: Date.now().toString(),
+             message: streamingMessage || "*(aborted)*",
+             role: 'assistant',
+             createdAt: new Date().toISOString()
+          };
+          return [...prev, newMsg];
+        });
+      } else {
+        console.error("Failed to send message:", err);
+        setMessages((prev) => prev.filter(m => m._id !== optimisticUserMsg._id));
+      }
     } finally {
       setSending(false);
+      setStreamingMessage("");
     }
   };
 
@@ -92,12 +193,53 @@ const ChatWindow = ({ chatId }) => {
     <div className="flex flex-col h-full bg-white relative">
       
       {/* Header */}
-      <div className="px-6 py-4 border-b border-zinc-200 bg-white flex items-center sticky top-0 z-10">
+      <div className="px-6 py-4 border-b border-zinc-200 bg-white flex items-center justify-between sticky top-0 z-10">
         <div className="flex flex-col">
           <h3 className="font-semibold text-zinc-900 text-lg tracking-tight flex items-center gap-2">
             AI Assistant
           </h3>
-          <p className="text-xs text-zinc-500 font-medium">Powered by NVIDIA Llama 3.1 70B</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-zinc-500 font-medium">
+              Powered by {AI_MODELS.find(m => m.id === selectedModel)?.name || "NVIDIA AI"}
+            </p>
+            {selectedModel === 'local-gguf' && (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200">
+                <span className="relative flex h-2 w-2">
+                  {localServerStatus === 'online' && (
+                    <>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </>
+                  )}
+                  {localServerStatus === 'offline' && (
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  )}
+                  {localServerStatus === 'checking' && (
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500 animate-pulse"></span>
+                  )}
+                </span>
+                <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">
+                  {localServerStatus === 'online' ? 'Online' : localServerStatus === 'offline' ? 'Offline' : 'Checking'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Model Selector */}
+        <div className="relative">
+          <select 
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            className="appearance-none bg-zinc-50 border border-zinc-200 text-zinc-700 py-1.5 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all cursor-pointer font-medium shadow-sm"
+          >
+            {AI_MODELS.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
         </div>
       </div>
 
@@ -139,15 +281,21 @@ const ChatWindow = ({ chatId }) => {
         )}
         
         {sending && (
-          <div className="flex justify-start animate-pulse">
-             <div className="flex gap-3 items-end">
-               <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-900 text-white flex items-center justify-center">
+          <div className="flex justify-start animate-fade-in-up">
+             <div className="flex max-w-[85%] lg:max-w-[75%] gap-3 items-end">
+               <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-900 text-white flex items-center justify-center flex-shrink-0">
                  <Bot size={16} />
                </div>
-               <div className="px-5 py-3.5 rounded-2xl bg-white text-zinc-800 rounded-bl-sm border border-zinc-200 shadow-sm flex gap-1 items-center h-[52px]">
-                 <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce"></span>
-                 <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                 <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+               <div className="px-5 py-3.5 rounded-2xl bg-white text-zinc-800 rounded-bl-sm border border-zinc-200 shadow-sm whitespace-pre-wrap leading-relaxed text-[15px] min-h-[52px] flex items-center">
+                 {streamingMessage ? (
+                   <span>{streamingMessage}</span>
+                 ) : (
+                   <div className="flex gap-1 items-center h-full animate-pulse">
+                     <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce"></span>
+                     <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                     <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                   </div>
+                 )}
                </div>
              </div>
           </div>
@@ -173,18 +321,40 @@ const ChatWindow = ({ chatId }) => {
               disabled={sending}
               rows={1}
             />
-            <button
-              type="submit"
-              disabled={!newMessage.trim() || sending}
-              className="absolute right-2 bottom-2 p-1.5 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-50 disabled:bg-zinc-300 disabled:text-zinc-500 transition-colors flex items-center justify-center h-8 w-8"
-            >
-              <Send size={16} className={sending ? "opacity-0" : "opacity-100 ml-0.5"} />
-              {sending && <Loader2 size={16} className="absolute inset-0 m-auto animate-spin" />}
-            </button>
+            {sending ? (
+              <button
+                type="button"
+                onClick={() => abortControllerRef.current?.abort()}
+                className="absolute right-2 bottom-2 p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center h-8 px-3 text-xs font-medium shadow-sm"
+              >
+                Stop
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!newMessage.trim()}
+                className="absolute right-2 bottom-2 p-1.5 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-50 disabled:bg-zinc-300 disabled:text-zinc-500 transition-colors flex items-center justify-center h-8 w-8 shadow-sm"
+              >
+                <Send size={16} className="ml-0.5" />
+              </button>
+            )}
           </form>
-          <p className="text-center text-xs text-zinc-400 mt-2">
-            AI can make mistakes. Verify important information.
-          </p>
+          
+          {/* Footer with Context Burner */}
+          <div className="flex items-center justify-between mt-3 px-1">
+            <div className="flex items-center gap-2 text-[11px] font-medium text-zinc-400">
+              <div className="w-24 h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${tokenPercentage > 80 ? 'bg-red-400' : tokenPercentage > 50 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                  style={{ width: `${tokenPercentage}%` }}
+                />
+              </div>
+              <span>Context: ~{tokenCount} / 4096 tokens</span>
+            </div>
+            <p className="text-[11px] text-zinc-400 hidden sm:block">
+              AI can make mistakes. Verify important information.
+            </p>
+          </div>
         </div>
       </div>
     </div>

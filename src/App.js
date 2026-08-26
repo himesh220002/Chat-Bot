@@ -7,8 +7,17 @@ import { Menu, X } from "lucide-react";
 
 function App() {
   const { user, loading } = useAuth();
-  const [selectedChat, setSelectedChat] = useState(null);
+  const [selectedChat, setSelectedChat] = useState(() => localStorage.getItem("selectedChatId") || null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Update localStorage when chat changes
+  React.useEffect(() => {
+    if (selectedChat) {
+      localStorage.setItem("selectedChatId", selectedChat);
+    } else {
+      localStorage.removeItem("selectedChatId");
+    }
+  }, [selectedChat]);
 
   if (loading) {
     return (
