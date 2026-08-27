@@ -4,6 +4,7 @@ import { Send, Loader2, Bot, User as UserIcon, ChevronDown } from "lucide-react"
 const API_URL = "http://localhost:4000/api";
 
 const AI_MODELS = [
+  { id: "local-gguf", name: "Local Model (LM Studio/Ollama)" },
   { id: "meta/llama-3.2-11b-vision-instruct", name: "Llama 3.2 11B Vision" },
   { id: "deepseek-ai/deepseek-v4-flash-0731", name: "DeepSeek V4 Flash" },
   { id: "nvidia/nemotron-3.5-lightning-30b-a3b", name: "Nemotron 3.5 Lightning" },
@@ -13,8 +14,7 @@ const AI_MODELS = [
   { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", name: "Nemotron 3 Nano Omni" },
   { id: "nvidia/ising-calibration-1.5-31b", name: "Ising Calibration 1.5" },
   { id: "poolside/laguna-xs-2.1", name: "Laguna XS 2.1" },
-  { id: "google/diffusiongemma-26b-a4b-it", name: "DiffusionGemma 26B" },
-  { id: "local-gguf", name: "Local Model (LM Studio/Ollama)" }
+  { id: "google/diffusiongemma-26b-a4b-it", name: "DiffusionGemma 26B" }
 ];
 
 const ChatWindow = ({ chatId }) => {

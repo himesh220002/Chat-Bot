@@ -34,10 +34,30 @@ app.use(cors({
 app.use(express.json());
 
 // MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/chatbot';
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+const connectDB = async () => {
+  const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+  const LOCAL_MONGODB_URI = process.env.LOCAL_MONGODB_URI || 'mongodb://localhost:27017/chatbot';
+
+  try {
+    if (MONGODB_URI) {
+      console.log('Attempting to connect to global MongoDB Atlas...');
+      await mongoose.connect(MONGODB_URI);
+      console.log('✅ Connected to global MongoDB');
+    } else {
+      throw new Error('No global MONGODB_URI provided');
+    }
+  } catch (err) {
+    console.error(`❌ Global MongoDB connection failed: ${err.message}`);
+    console.log('🔌 Falling back to local MongoDB (Ghost Mode)...');
+    try {
+      await mongoose.connect(LOCAL_MONGODB_URI);
+      console.log('✅ Connected to local MongoDB (Ghost Mode)');
+    } catch (localErr) {
+      console.error('❌ Local MongoDB connection also failed. Please ensure MongoDB is installed and running locally:', localErr.message);
+    }
+  }
+};
+connectDB();
 
 // NVIDIA API Integration via OpenAI SDK
 const openai = new OpenAI({
@@ -171,13 +191,28 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
     const messageCount = await Message.countDocuments({ chat_id: chatId });
     if (messageCount === 1) {
       try {
-        const titleCompletion = await openai.chat.completions.create({
-          model: "meta/llama-3.2-11b-vision-instruct",
-          messages: [
-            { role: "system", content: "Generate a short, descriptive title for a chat (max 5 words). Do not use quotes." },
-            { role: "user", content: content },
-          ],
-        });
+        let titleCompletion;
+        if (model === 'local-gguf') {
+          const localOpenAI = new OpenAI({
+            apiKey: 'ollama',
+            baseURL: 'http://localhost:11434/v1'
+          });
+          titleCompletion = await localOpenAI.chat.completions.create({
+            model: "qwen2.5-coder:7b",
+            messages: [
+              { role: "system", content: "Generate a short, descriptive title for a chat (max 5 words). Do not use quotes." },
+              { role: "user", content: content },
+            ],
+          });
+        } else {
+          titleCompletion = await openai.chat.completions.create({
+            model: "meta/llama-3.2-11b-vision-instruct",
+            messages: [
+              { role: "system", content: "Generate a short, descriptive title for a chat (max 5 words). Do not use quotes." },
+              { role: "user", content: content },
+            ],
+          });
+        }
         const title = titleCompletion.choices[0].message.content.trim();
         await Chat.findByIdAndUpdate(chatId, { title });
       } catch (err) {
