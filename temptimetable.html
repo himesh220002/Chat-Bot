@@ -9,6 +9,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
 
         th,
@@ -52,237 +53,264 @@
 
 <body>
     <h2>Editable Timetable</h2>
+    <button id="toggle-layout-btn"
+        style="margin-bottom: 10px; padding: 8px 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold;">Toggle
+        Layout (Vertical ↔ Horizontal)</button>
     <table id="timetable">
         <tr>
-            <th>Day</th>
-            <th>1am</th>
-            <th>2am</th>
-            <th>3am</th>
-            <th>4am</th>
-            <th>5am</th>
-            <th>6am</th>
-            <th>7am</th>
-            <th>8am</th>
-            <th>9am</th>
-            <th>10am</th>
-            <th>11am</th>
+            <th>Time</th>
+            <th>M</th>
+            <th>T</th>
+            <th>W</th>
+            <th>T</th>
+            <th>F</th>
+            <th>S</th>
+            <th>S</th>
+        </tr>
+        <tr>
             <th>12am</th>
-            <th>1</th>
-            <th>2</th>
-            <th>3</th>
-            <th>4</th>
-            <th>5</th>
-            <th>6</th>
-            <th>7</th>
-            <th>8</th>
-            <th>9</th>
-            <th>10</th>
-            <th>11</th>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+        </tr>
+        <tr>
+            <th>1am</th>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+        </tr>
+        <tr>
+            <th>2am</th>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+        </tr>
+        <tr>
+            <th>3am</th>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+        </tr>
+        <tr>
+            <th>4am</th>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+        </tr>
+        <tr>
+            <th>5am</th>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+        </tr>
+        <tr>
+            <th>6am</th>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+        </tr>
+        <tr>
+            <th>7am</th>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">0</td>
+        </tr>
+        <tr>
+            <th>8am</th>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">2</td>
+        </tr>
+        <tr>
+            <th>9am</th>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">2</td>
+        </tr>
+        <tr>
+            <th>10am</th>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">2</td>
+        </tr>
+        <tr>
+            <th>11am</th>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">0</td>
+        </tr>
+        <tr>
             <th>12pm</th>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">0</td>
         </tr>
         <tr>
-            <td>M</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">0</td>
-            <td class="editable" data-value="X">1</td>
-            <td class="editable" data-value="1">1</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">0</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-        </tr>
-        <!-- Repeat similar rows for T, W, T, F, S, S -->
-        <tr>
-            <td>T</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="1">1</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
+            <th>1pm</th>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">0</td>
         </tr>
         <tr>
-            <td>W</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="1">1</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
+            <th>2pm</th>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">0</td>
         </tr>
         <tr>
-            <td>T</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="1">1</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
+            <th>3pm</th>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">X</td>
+            <td class="editable">0</td>
         </tr>
         <tr>
-            <td>F</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="1">1</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
+            <th>4pm</th>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
         </tr>
         <tr>
-            <td>S</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="1">1</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
+            <th>5pm</th>
+            <td class="editable">1</td>
+            <td class="editable">0</td>
+            <td class="editable">1</td>
+            <td class="editable">0</td>
+            <td class="editable">1</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
         </tr>
         <tr>
-            <td>S</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="X">X</td>
-            <td class="editable" data-value="1">1</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="2">2</td>
-            <td class="editable" data-value="0">0</td>
-            <td class="editable" data-value="0">0</td>
+            <th>6pm</th>
+            <td class="editable">0</td>
+            <td class="editable">1</td>
+            <td class="editable">0</td>
+            <td class="editable">1</td>
+            <td class="editable">0</td>
+            <td class="editable">1</td>
+            <td class="editable">0</td>
         </tr>
-
+        <tr>
+            <th>7pm</th>
+            <td class="editable">2</td>
+            <td class="editable">0</td>
+            <td class="editable">2</td>
+            <td class="editable">0</td>
+            <td class="editable">2</td>
+            <td class="editable">0</td>
+            <td class="editable">2</td>
+        </tr>
+        <tr>
+            <th>8pm</th>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+        </tr>
+        <tr>
+            <th>9pm</th>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+        </tr>
+        <tr>
+            <th>10pm</th>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+            <td class="editable">2</td>
+        </tr>
+        <tr>
+            <th>11pm</th>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+            <td class="editable">0</td>
+        </tr>
     </table>
 
     <script>
         function updateCellColor(cell) {
-            // remove old classes
             cell.classList.remove('val-0', 'val-1', 'val-2', 'val-X');
             const val = cell.textContent.trim().toUpperCase();
             if (val === '0') cell.classList.add('val-0');
@@ -290,22 +318,60 @@
             else if (val === '2') cell.classList.add('val-2');
             else if (val === 'X') cell.classList.add('val-X');
         }
+        function attachEditableListeners() {
+            document.querySelectorAll('.editable').forEach(cell => {
+                updateCellColor(cell);
 
-        document.querySelectorAll('.editable').forEach(cell => {
-            // initialize colors
-            updateCellColor(cell);
+                cell.addEventListener('click', function () {
+                    this.contentEditable = 'true';
+                    this.focus();
+                });
+                cell.addEventListener('blur', function () {
+                    this.contentEditable = 'false';
+                    updateCellColor(this);
+                });
+                cell.addEventListener('input', function () {
+                    updateCellColor(this);
+                });
+            });
+        }
 
-            cell.addEventListener('click', function () {
-                this.contentEditable = 'true';
-                this.focus();
+        // Initial attachment
+        attachEditableListeners();
+
+        // Toggle layout logic
+        document.getElementById('toggle-layout-btn').addEventListener('click', function () {
+            const table = document.getElementById('timetable');
+            const rows = Array.from(table.querySelectorAll('tr'));
+            if (rows.length === 0) return;
+
+            // Extract 2D array of cells
+            const matrix = rows.map(row => Array.from(row.children));
+
+            // Transpose
+            const transposed = matrix[0].map((_, colIndex) => matrix.map(row => row[colIndex]));
+
+            // Rebuild the table
+            table.innerHTML = '';
+            transposed.forEach((newRow, rowIndex) => {
+                const tr = document.createElement('tr');
+                newRow.forEach((cell, colIndex) => {
+                    const isHeader = rowIndex === 0 || colIndex === 0;
+                    const newCell = document.createElement(isHeader ? 'th' : 'td');
+                    newCell.innerHTML = cell.innerHTML;
+
+                    // Copy attributes (class, data-value, etc)
+                    Array.from(cell.attributes).forEach(attr => {
+                        newCell.setAttribute(attr.name, attr.value);
+                    });
+
+                    tr.appendChild(newCell);
+                });
+                table.appendChild(tr);
             });
-            cell.addEventListener('blur', function () {
-                this.contentEditable = 'false';
-                updateCellColor(this);
-            });
-            cell.addEventListener('input', function () {
-                updateCellColor(this);
-            });
+
+            // Re-attach listeners to the newly created elements
+            attachEditableListeners();
         });
     </script>
 </body>
