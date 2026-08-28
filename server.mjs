@@ -18,10 +18,11 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
+  'https://chat-bot-cypher.netlify.app' // Added the main URL as well just in case
 ];
 
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) === -1) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -104,7 +105,7 @@ const openai = new OpenAI({
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  
+
   if (token == null) return res.sendStatus(401);
 
   jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_for_local_dev', (err, user) => {
@@ -251,14 +252,14 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
         const title = titleCompletion.choices[0].message.content.trim();
         await Chat.findByIdAndUpdate(chatId, { title });
       } catch (err) {
-         console.error('Failed to generate title', err);
+        console.error('Failed to generate title', err);
       }
     }
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    
+
     // Send user message confirmation immediately
     res.write(`data: ${JSON.stringify({ type: 'user_message', userMessage })}\n\n`);
 
@@ -286,7 +287,7 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
       } else {
         const targetModel = model || "meta/llama-3.2-11b-vision-instruct";
         console.log(`[DEBUG] Routing to NVIDIA API for model: ${targetModel}`);
-        
+
         completion = await openai.chat.completions.create({
           model: targetModel,
           messages: messagesForAI,
@@ -323,7 +324,7 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
         role: 'assistant'
       });
       await botMessage.save();
-      
+
       res.write(`data: ${JSON.stringify({ type: 'done', botMessage })}\n\n`);
       res.end();
 
@@ -376,7 +377,7 @@ app.get('/api/ollama/status', async (req, res) => {
 
 // Endpoint to check current DB ecosystem status
 app.get('/api/ecosystem/status', (req, res) => {
-  res.json({ 
+  res.json({
     active: activeDbEcosystem,
     globalStatus: dbStatuses.global,
     localStatus: dbStatuses.local
@@ -406,7 +407,7 @@ app.post('/api/ecosystem/switch', async (req, res) => {
     await mongoose.connect(uri);
     activeDbEcosystem = target;
     console.log(`✅ Manually switched to ${target} MongoDB`);
-    
+
     res.json({ success: true, active: activeDbEcosystem });
   } catch (error) {
     console.error(`Failed to switch to ${req.body.target} DB:`, error);
