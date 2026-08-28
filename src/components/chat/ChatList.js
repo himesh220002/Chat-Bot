@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Plus, Trash2, LogOut, Loader2, MessageSquareText } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
-const API_URL = "http://localhost:4000/api";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000/api";
 
 const ChatList = ({ onSelectChat, currentChatId }) => {
   const { user, logout } = useAuth();

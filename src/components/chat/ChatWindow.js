@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Send, Loader2, Bot, User as UserIcon, ChevronDown } from "lucide-react";
 
-const API_URL = "http://localhost:4000/api";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000/api";
 
 const AI_MODELS = [
   { id: "local-gguf", name: "Local Model (LM Studio/Ollama)" },
