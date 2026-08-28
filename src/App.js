@@ -74,7 +74,7 @@ function App() {
         )}
 
         {selectedChat ? (
-          <ChatWindow chatId={selectedChat} />
+          <ChatWindow key={selectedChat} chatId={selectedChat} />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-white animate-fade-in">
             <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-zinc-200 text-zinc-400">

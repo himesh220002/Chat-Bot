@@ -274,8 +274,25 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
 3. Professional Correspondence (Emails & Letters): Use standard blocked paragraph text. Structure with Subject, Salutation, Body (left-aligned, single blank lines between paragraphs), and Sign-off.
 4. Technical Documentation & Guides: Use hierarchical Markdown headers (#, ##, ###), bolding (**text**) for emphasis, inline code variables (\`variable\`), and horizontal rules (---).
 5. Lyrics & Poetry: Output lyrics with clean, single line breaks between lines, and double line breaks between verses/choruses.
-6. Diagrams: Use mermaid.js syntax wrapped in \`\`\`mermaid code blocks to draw flowcharts, state diagrams, and other visual graphs when requested.
-7. Math & Formulas: Always use $$ ... $$ for block math equations and $ ... $ for inline math. NEVER use \\[ \\] or \\( \\).`
+6. Proactive Diagrams & Visuals: You MUST proactively generate visual diagrams using Mermaid.js (\`\`\`mermaid) to explain concepts. IMPORTANT MERMAID RULES:
+- Only use standard flowcharts (graph TD or graph LR).
+- You MUST format nodes and labeled arrows exactly like this example:
+  \`\`\`mermaid
+  graph TD
+      A[Start] -->|Action| B[Next Step]
+      B --> C[End]
+  \`\`\`
+- Do NOT generate SVG or ASCII art, as you cannot compute spatial coordinates reliably. Use Mermaid exclusively.
+7. Math & Formulas: Always use $$ ... $$ for block math equations and $ ... $ for inline math. NEVER use \\[ \\] or \\( \\).
+8. Graphs & Charts: If the user asks for a chart or graph, you MUST output the chart data as a JSON object inside a \`\`\`recharts\`\`\` code block. The JSON MUST follow this exact schema:
+{
+  "type": "bar", // Can be: bar, line, area, pie, scatter
+  "data": [ { "name": "A", "val": 40 }, { "name": "B", "val": 30 } ],
+  "xAxisKey": "name",
+  "dataKeys": ["val"],
+  "title": "Optional Chart Title",
+  "colors": ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088fe"]
+}`
       },
       ...recentMessages.map(msg => ({
         role: msg.role === 'user' ? 'user' : 'assistant',
@@ -301,11 +318,21 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
         const targetModel = model || "meta/llama-3.2-11b-vision-instruct";
         console.log(`[DEBUG] Routing to NVIDIA API for model: ${targetModel}`);
 
-        completion = await openai.chat.completions.create({
+        const reqOptions = {
           model: targetModel,
           messages: messagesForAI,
           stream: true,
-        });
+        };
+
+        if (targetModel.includes('deepseek')) {
+          reqOptions.extra_body = {
+            chat_template_kwargs: {
+              thinking: false
+            }
+          };
+        }
+
+        completion = await openai.chat.completions.create(reqOptions);
       }
 
       let botReply = '';
@@ -372,6 +399,23 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'AI reply generation failed' });
+  }
+});
+
+app.post('/api/chats/:id/messages/append', authenticateToken, async (req, res) => {
+  try {
+    const { message, role } = req.body;
+    const newMsg = new Message({
+      chat_id: req.params.id,
+      user_id: req.user.userId,
+      message,
+      role: role || 'assistant'
+    });
+    await newMsg.save();
+    res.json(newMsg);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to append message' });
   }
 });
 

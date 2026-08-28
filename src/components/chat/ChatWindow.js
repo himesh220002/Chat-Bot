@@ -6,10 +6,13 @@ import remarkBreaks from 'remark-breaks';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import mermaid from 'mermaid';
+import {
+  BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, ScatterChart, Scatter,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
+} from 'recharts';
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000/api";
 
@@ -29,6 +32,8 @@ const AI_MODELS = [
   { id: "local-gguf", name: "Local Model (LM Studio/Ollama)" },
   { id: "meta/llama-3.2-11b-vision-instruct", name: "Llama 3.2 11B Vision" },
   { id: "deepseek-ai/deepseek-v4-flash-0731", name: "DeepSeek V4 Flash" },
+  { id: "deepseek-ai/deepseek-v4-pro-0813", name: "DeepSeek V4 Pro" },
+  { id: "kimi-k3", name: "Kimi K3" },
   { id: "nvidia/nemotron-3.5-lightning-30b-a3b", name: "Nemotron 3.5 Lightning" },
   { id: "meta/muse-glimmer-30b", name: "Muse Glimmer 30B" },
   { id: "minimaxai/minimax-m3", name: "MiniMax M3 Preview" },
@@ -57,13 +62,13 @@ const TerminalLoader = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setDots(prev => prev.length >= 12 ? '' : prev + '_[>]');
+      setDots(prev => prev.length >= 3 ? '' : prev + '♛');
     }, 400);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="font-mono text-zinc-500 font-bold tracking-widest flex items-center h-full text-[15px]">
+    <div className="font-mono text-zinc-500 font-bold tracking-widest flex items-center h-full text-base">
       &gt;{dots}
     </div>
   );
@@ -71,62 +76,179 @@ const TerminalLoader = () => {
 
 const MermaidDiagram = ({ chart, isStreaming }) => {
   const [svg, setSvg] = useState('');
+  const [hasError, setHasError] = useState(false);
   const [id] = useState(() => `mermaid-${Math.random().toString(36).substr(2, 9)}`);
 
   useEffect(() => {
     if (isStreaming) return;
 
+    // Auto-fix stubborn LLM syntax hallucinations
+    const sanitizedChart = chart
+      .replace(/^mermaid\s+/i, '') // Remove accidental 'mermaid ' prefix inside the block
+      .replace(/-+>\s*\|([^|]+)\|\s*>/g, '-->|$1| ') // Fix -->|Text|> to -->|Text| (with flexible spacing)
+      .replace(/-\.+>/g, '-.->') // Fix -..> to -.->
+      .trim();
+
     let isMounted = true;
     const renderDiagram = async () => {
       try {
-        const { svg: renderedSvg } = await mermaid.render(id, chart);
+        await mermaid.parse(sanitizedChart); // This explicitly checks syntax and throws if invalid
+        const { svg: renderedSvg } = await mermaid.render(id, sanitizedChart);
         if (isMounted) {
           setSvg(renderedSvg);
+          setHasError(false);
         }
       } catch (err) {
         console.error("Mermaid syntax error:", err);
+        if (isMounted) {
+          setHasError(true);
+        }
       }
     };
     renderDiagram();
     return () => { isMounted = false; };
   }, [chart, id, isStreaming]);
 
+  if (hasError) {
+    return (
+      <div className="relative my-4 group">
+        <div className="absolute top-2 right-2 text-xs uppercase font-bold tracking-wider text-red-400 bg-red-950/80 px-2 py-1 rounded backdrop-blur-sm border border-red-900/50 z-10">
+          Invalid Diagram Syntax
+        </div>
+        <SyntaxHighlighter
+          language="mermaid"
+          style={vscDarkPlus}
+          PreTag="div"
+          className="rounded-lg !m-0 !bg-[#1e1e1e] border border-zinc-800"
+        >
+          {chart}
+        </SyntaxHighlighter>
+      </div>
+    );
+  }
+
   if (isStreaming || !svg) {
     return <div className="animate-pulse flex p-4 bg-[#1e1e1e] rounded-lg my-4 h-32 items-center justify-center text-zinc-400 text-sm">Drawing Diagram...</div>;
   }
 
   return (
-    <div className="relative my-4 rounded-lg overflow-hidden border border-zinc-800 bg-[#1e1e1e] shadow-md group">
-      <TransformWrapper
-        initialScale={1}
-        minScale={0.5}
-        maxScale={4}
-        centerOnInit={true}
-        wheel={{ step: 0.1 }}
-      >
-        {({ zoomIn, zoomOut, resetTransform }) => (
-          <>
-            <div className="absolute top-3 right-3 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onClick={() => zoomIn()} className="p-1.5 bg-zinc-700/80 hover:bg-zinc-600 text-white rounded-md shadow-sm backdrop-blur-sm transition-colors" title="Zoom In">
-                <ZoomIn size={16} />
-              </button>
-              <button onClick={() => zoomOut()} className="p-1.5 bg-zinc-700/80 hover:bg-zinc-600 text-white rounded-md shadow-sm backdrop-blur-sm transition-colors" title="Zoom Out">
-                <ZoomOut size={16} />
-              </button>
-              <button onClick={() => resetTransform()} className="p-1.5 bg-zinc-700/80 hover:bg-zinc-600 text-white rounded-md shadow-sm backdrop-blur-sm transition-colors" title="Reset Zoom">
-                <Maximize size={16} />
-              </button>
-            </div>
-            <div className="w-full h-full overflow-hidden flex justify-center bg-[#1e1e1e] p-1 cursor-move min-h-[200px]">
-              <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}>
-                <div dangerouslySetInnerHTML={{ __html: svg }} className="w-full flex justify-center" />
-              </TransformComponent>
-            </div>
-          </>
-        )}
-      </TransformWrapper>
+    <div className="relative w-full my-4 rounded-lg overflow-hidden border border-zinc-800 bg-[#1e1e1e] shadow-md group">
+      <div className="w-full h-full overflow-auto flex items-center justify-center bg-[#1e1e1e] p-6 min-h-[400px]">
+        <div dangerouslySetInnerHTML={{ __html: svg }} className="w-full flex justify-center [&>svg]:w-full [&>svg]:min-w-[600px] [&>svg]:max-w-[1400px] [&>svg]:h-auto" />
+      </div>
     </div>
   );
+};
+
+const SvgRenderer = ({ code }) => {
+  // Basic XSS protection for SVG script tags
+  const sanitized = String(code).replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+  return (
+    <div className="relative my-4 rounded-lg overflow-hidden border border-zinc-200 bg-white shadow-sm flex flex-col group">
+      <div className="flex items-center justify-between px-4 py-2 bg-zinc-50 border-b border-zinc-200">
+        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5"><ZoomIn size={14} /> Vector Graphic</span>
+      </div>
+      <div className="p-4 flex items-center justify-center overflow-auto max-h-[500px] w-full bg-white [&>svg]:max-w-full [&>svg]:h-auto" dangerouslySetInnerHTML={{ __html: sanitized }} />
+    </div>
+  );
+};
+
+const ChartRenderer = ({ configStr }) => {
+  try {
+    const config = JSON.parse(configStr);
+    const { type, data, xAxisKey, dataKeys, title, colors } = config;
+    const defaultColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe'];
+    const activeColors = colors || defaultColors;
+
+    const renderChart = () => {
+      switch (type) {
+        case 'bar':
+          return (
+            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey={xAxisKey} />
+              <YAxis />
+              <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+              <Legend />
+              {dataKeys?.map((key, i) => (
+                <Bar key={key} dataKey={key} fill={activeColors[i % activeColors.length]} radius={[4, 4, 0, 0]} />
+              ))}
+            </BarChart>
+          );
+        case 'line':
+          return (
+            <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey={xAxisKey} />
+              <YAxis />
+              <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+              <Legend />
+              {dataKeys?.map((key, i) => (
+                <Line key={key} type="monotone" dataKey={key} stroke={activeColors[i % activeColors.length]} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+              ))}
+            </LineChart>
+          );
+        case 'area':
+          return (
+            <AreaChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey={xAxisKey} />
+              <YAxis />
+              <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+              <Legend />
+              {dataKeys?.map((key, i) => (
+                <Area key={key} type="monotone" dataKey={key} fill={activeColors[i % activeColors.length]} stroke={activeColors[i % activeColors.length]} fillOpacity={0.3} />
+              ))}
+            </AreaChart>
+          );
+        case 'pie':
+          return (
+            <PieChart>
+              <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+              <Legend />
+              <Pie data={data} dataKey={dataKeys?.[0]} nameKey={xAxisKey} cx="50%" cy="50%" outerRadius={120} label>
+                {data?.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={activeColors[index % activeColors.length]} />
+                ))}
+              </Pie>
+            </PieChart>
+          );
+        case 'scatter':
+          return (
+            <ScatterChart margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey={xAxisKey} type="number" name={xAxisKey} />
+              <YAxis dataKey={dataKeys?.[0]} type="number" name={dataKeys?.[0]} />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+              <Legend />
+              <Scatter name={dataKeys?.[0]} data={data} fill={activeColors[0]} />
+            </ScatterChart>
+          );
+        default:
+          return <div className="text-red-500 p-4">Unsupported chart type: {type}</div>;
+      }
+    };
+
+    return (
+      <div className="w-full my-6 bg-white rounded-xl border border-zinc-200 p-6 shadow-sm overflow-x-auto">
+        {title && <h3 className="text-lg font-bold text-center text-zinc-800 mb-6">{title}</h3>}
+        <div className="h-[400px] w-full min-w-[500px]">
+          <ResponsiveContainer width="100%" height="100%">
+            {renderChart()}
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  } catch (err) {
+    // If JSON is invalid (e.g. streaming), return a loader
+    return (
+      <div className="w-full my-6 bg-white rounded-xl border border-zinc-200 p-6 flex flex-col items-center justify-center h-[300px]">
+        <Loader2 className="w-8 h-8 animate-spin text-zinc-400 mb-4" />
+        <p className="text-sm text-zinc-500 font-medium">Generating Chart Data...</p>
+      </div>
+    );
+  }
 };
 
 const CodeBlock = ({ node, inline, className, children, isStreaming, ...props }) => {
@@ -139,9 +261,32 @@ const CodeBlock = ({ node, inline, className, children, isStreaming, ...props })
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  if (!inline && match && (match[1] === 'recharts' || match[1] === 'json')) {
+    // If it's standard json, verify it actually contains a chart config
+    if (match[1] === 'json') {
+      try {
+        const config = JSON.parse(String(children));
+        if (config && config.type && Array.isArray(config.data) && config.xAxisKey) {
+          return <ChartRenderer configStr={String(children)} />;
+        }
+      } catch (e) {
+        // Not valid JSON chart data, let it fall through to normal syntax highlighting
+      }
+    } else {
+      // It explicitly declared the recharts language
+      return <ChartRenderer configStr={String(children)} />;
+    }
+  }
+
   if (!inline && match) {
     if (match[1].toLowerCase() === 'mermaid') {
       return <MermaidDiagram chart={String(children)} isStreaming={isStreaming} />;
+    }
+    const isSvgMatch = match[1].toLowerCase() === 'svg';
+    const isXmlWithSvg = match[1].toLowerCase() === 'xml' && String(children).trim().startsWith('<svg');
+
+    if (isSvgMatch || isXmlWithSvg) {
+      return <SvgRenderer code={children} />;
     }
 
     return (
@@ -168,8 +313,20 @@ const CodeBlock = ({ node, inline, className, children, isStreaming, ...props })
       </div>
     );
   }
+
+  // Intercept LLMs accidentally outputting Mermaid as a single-line inline code block (`mermaid graph LR...`)
+  const contentStr = String(children);
+  if (inline && contentStr.trim().startsWith('mermaid graph')) {
+    const rawChart = contentStr.trim().replace(/^mermaid\s+/i, '');
+    // Inject newlines after `graph LR` and after node closures so Mermaid can parse it
+    const chartWithNewlines = rawChart
+      .replace(/^graph\s+([A-Z]{2})\s+/i, 'graph $1\n')
+      .replace(/\]\s+([A-Z])/g, ']\n$1');
+    return <MermaidDiagram chart={chartWithNewlines} isStreaming={isStreaming} />;
+  }
+
   return (
-    <code className={`${className} bg-zinc-200 text-zinc-800 px-1.5 py-0.5 rounded text-[13px] font-mono`} {...props}>
+    <code className={`${className} bg-zinc-200 text-zinc-800 px-1.5 py-0.5 rounded text-sm font-mono`} {...props}>
       {children}
     </code>
   );
@@ -313,6 +470,7 @@ const ChatWindow = ({ chatId }) => {
     };
     setMessages((prev) => [...prev, optimisticUserMsg]);
 
+    let currentStreamText = '';
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/chats/${chatId}/messages`, {
@@ -333,7 +491,6 @@ const ChatWindow = ({ chatId }) => {
       const decoder = new TextDecoder();
       let done = false;
       let partialLine = '';
-      let currentStreamText = '';
 
       while (!done) {
         const { value, done: readerDone } = await reader.read();
@@ -384,16 +541,30 @@ const ChatWindow = ({ chatId }) => {
     } catch (err) {
       if (err.name === 'AbortError') {
         console.log("Stream aborted by user.");
-        // Make the partial streaming message permanent
+        const abortedText = currentStreamText ? currentStreamText + "\n\n*(aborted)*" : "*(aborted)*";
+
+        // Save the partial message to the database so it persists on refresh
+        fetch(`${API_URL}/chats/${chatId}/messages/append`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`
+          },
+          body: JSON.stringify({ message: abortedText, role: 'assistant' })
+        }).catch(console.error);
+
+        // Make the partial streaming message permanent in UI
         setMessages((prev) => {
           const newMsg = {
             _id: Date.now().toString(),
-            message: streamingMessage || "*(aborted)*",
+            message: abortedText,
             role: 'assistant',
             createdAt: new Date().toISOString()
           };
           return [...prev, newMsg];
         });
+        setStreamingMessage("");
+        currentStreamText = '';
       } else {
         console.error("Failed to send message:", err);
         setMessages((prev) => [...prev, {
@@ -438,7 +609,7 @@ const ChatWindow = ({ chatId }) => {
                   {globalDbStatus === 'offline' && <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>}
                   {globalDbStatus === 'checking' && <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-400 animate-pulse"></span>}
                 </span>
-                <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">Global</span>
+                <span className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Global</span>
               </div>
               <div className="flex items-center gap-1.5 border-r border-zinc-200 pr-2">
                 <span className="relative flex h-2 w-2">
@@ -446,7 +617,7 @@ const ChatWindow = ({ chatId }) => {
                   {localDbStatus === 'offline' && <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>}
                   {localDbStatus === 'checking' && <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-400 animate-pulse"></span>}
                 </span>
-                <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">Local</span>
+                <span className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Local</span>
               </div>
               <div className="flex items-center pl-1">
                 <button
@@ -462,7 +633,7 @@ const ChatWindow = ({ chatId }) => {
                     (dbEcosystem === 'local' && globalDbStatus !== 'online') ||
                     dbEcosystem === 'checking' || dbEcosystem === 'offline' || dbEcosystem === 'disconnected'
                   }
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${dbEcosystem === 'global'
+                  className={`text-xs font-bold px-2 py-0.5 rounded transition-colors ${dbEcosystem === 'global'
                     ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 cursor-pointer'
                     : dbEcosystem === 'local'
                       ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-pointer'
@@ -491,7 +662,7 @@ const ChatWindow = ({ chatId }) => {
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500 animate-pulse"></span>
                   )}
                 </span>
-                <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">
                   AI Local: {localServerStatus === 'online' ? 'Online' : localServerStatus === 'offline' ? 'Offline' : 'Checking'}
                 </span>
               </div>
@@ -517,76 +688,78 @@ const ChatWindow = ({ chatId }) => {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scrollbar-hide scroll-smooth">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-            <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-400 border border-zinc-200">
-              <Bot size={32} />
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 scrollbar-hide scroll-smooth">
+        <div className="w-full max-w-[75vw] mx-auto space-y-6 min-h-full flex flex-col">
+          {messages.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-400 border border-zinc-200">
+                <Bot size={32} />
+              </div>
+              <p className="text-zinc-500 text-sm">Send a message to start the conversation.</p>
             </div>
-            <p className="text-zinc-500 text-sm">Send a message to start the conversation.</p>
-          </div>
-        ) : (
-          messages.map((msg, index) => {
-            const isUser = msg.role === 'user';
-            return (
-              <div key={msg._id || index} className={`flex ${isUser ? "justify-end" : "justify-start"} animate-fade-in-up`}>
-                <div className={`flex max-w-[85%] lg:max-w-[75%] ${isUser ? "flex-row-reverse" : "flex-row"} gap-3 items-end`}>
+          ) : (
+            messages.map((msg, index) => {
+              const isUser = msg.role === 'user';
+              return (
+                <div key={msg._id || index} className={`flex ${isUser ? "justify-end" : "justify-start"} animate-fade-in-up`}>
+                  <div className={`flex ${isUser ? "max-w-[85%] lg:max-w-[75%] flex-row-reverse" : "max-w-[95%] lg:max-w-[90%] flex-row w-full"} gap-3 items-end`}>
 
-                  {/* Avatar */}
-                  <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center border ${isUser ? "bg-zinc-100 border-zinc-200 text-zinc-600" : "bg-zinc-900 border-zinc-900 text-white"
-                    }`}>
-                    {isUser ? <UserIcon size={16} /> : <Bot size={16} />}
-                  </div>
+                    {/* Avatar */}
+                    <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center border ${isUser ? "bg-zinc-100 border-zinc-200 text-zinc-600" : "bg-zinc-900 border-zinc-900 text-white"
+                      }`}>
+                      {isUser ? <UserIcon size={16} /> : <Bot size={16} />}
+                    </div>
 
-                  {/* Message Bubble */}
-                  <div className={`px-5 py-3.5 rounded-2xl ${isUser
-                    ? "bg-zinc-100 text-zinc-900 rounded-br-sm border border-zinc-200"
-                    : "bg-white text-zinc-800 rounded-bl-sm border border-zinc-200 shadow-sm markdown-body"
-                    } leading-relaxed text-[15px] overflow-hidden`}>
-                    {isUser ? (
-                      <div className="whitespace-pre-wrap">{msg.message}</div>
-                    ) : (
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-                        rehypePlugins={[rehypeKatex]}
-                        components={MarkdownComponents}
-                      >
-                        {preprocessLaTeX(msg.message)}
-                      </ReactMarkdown>
-                    )}
+                    {/* Message Bubble */}
+                    <div className={`px-5 py-3.5 rounded-2xl ${isUser
+                      ? "bg-zinc-100 text-zinc-900 rounded-br-sm border border-zinc-200"
+                      : "bg-white text-zinc-800 rounded-bl-sm border border-zinc-200 shadow-sm markdown-body"
+                      } leading-relaxed text-base overflow-hidden`}>
+                      {isUser ? (
+                        <div className="whitespace-pre-wrap">{msg.message}</div>
+                      ) : (
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+                          rehypePlugins={[rehypeKatex]}
+                          components={MarkdownComponents}
+                        >
+                          {preprocessLaTeX(msg.message)}
+                        </ReactMarkdown>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
 
-        {sending && (
-          <div className="flex justify-start animate-fade-in-up">
-            <div className="flex max-w-[85%] lg:max-w-[75%] gap-3 items-end">
-              <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-900 text-white flex items-center justify-center flex-shrink-0">
-                <Bot size={16} />
-              </div>
-              <div className={`px-5 py-3.5 rounded-2xl bg-white text-zinc-800 rounded-bl-sm border border-zinc-200 shadow-sm leading-relaxed text-[15px] min-h-[52px] overflow-hidden markdown-body w-full ${!streamingMessage ? 'flex items-center' : ''}`}>
-                {streamingMessage ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-                    rehypePlugins={[rehypeKatex]}
-                    components={{
-                      ...MarkdownComponents,
-                      code: (props) => <CodeBlock {...props} isStreaming={true} />
-                    }}
-                  >
-                    {preprocessLaTeX(streamingMessage)}
-                  </ReactMarkdown>
-                ) : (
-                  <TerminalLoader />
-                )}
+          {sending && (
+            <div className="flex justify-start animate-fade-in-up">
+              <div className="flex max-w-[85%] lg:max-w-[75%] gap-3 items-end">
+                <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-900 text-white flex items-center justify-center flex-shrink-0">
+                  <Bot size={16} />
+                </div>
+                <div className={`px-5 py-3.5 rounded-2xl bg-white text-zinc-800 rounded-bl-sm border border-zinc-200 shadow-sm leading-relaxed text-base min-h-[52px] overflow-hidden markdown-body w-full ${!streamingMessage ? 'flex items-center' : ''}`}>
+                  {streamingMessage ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={{
+                        ...MarkdownComponents,
+                        code: (props) => <CodeBlock {...props} isStreaming={true} />
+                      }}
+                    >
+                      {preprocessLaTeX(streamingMessage)}
+                    </ReactMarkdown>
+                  ) : (
+                    <TerminalLoader />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input Area */}
@@ -603,7 +776,7 @@ const ChatWindow = ({ chatId }) => {
                 }
               }}
               placeholder="Message inputchat..."
-              className="w-full bg-transparent border-0 text-zinc-900 rounded-2xl pl-4 pr-12 py-3.5 focus:ring-0 resize-none max-h-32 min-h-[52px] scrollbar-hide text-[15px]"
+              className="w-full bg-transparent border-0 text-zinc-900 rounded-2xl pl-4 pr-12 py-3.5 focus:ring-0 resize-none max-h-32 min-h-[52px] scrollbar-hide text-base"
               disabled={sending}
               rows={1}
             />
@@ -628,7 +801,7 @@ const ChatWindow = ({ chatId }) => {
 
           {/* Footer with Context Burner */}
           <div className="flex items-center justify-between mt-3 px-1">
-            <div className="flex items-center gap-2 text-[11px] font-medium text-zinc-400">
+            <div className="flex items-center gap-2 text-xs font-medium text-zinc-400">
               <div className="w-24 h-1.5 bg-zinc-200 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${tokenPercentage > 80 ? 'bg-red-400' : tokenPercentage > 50 ? 'bg-amber-400' : 'bg-emerald-400'}`}
@@ -637,7 +810,7 @@ const ChatWindow = ({ chatId }) => {
               </div>
               <span>Context: ~{tokenCount} / 4096 tokens</span>
             </div>
-            <p className="text-[11px] text-zinc-400 hidden sm:block">
+            <p className="text-xs text-zinc-400 hidden sm:block">
               AI can make mistakes. Verify important information.
             </p>
           </div>
