@@ -25,6 +25,9 @@ const ChatWindow = ({ chatId }) => {
   const [streamingMessage, setStreamingMessage] = useState("");
   const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem("selectedModelId") || AI_MODELS[0].id);
   const [localServerStatus, setLocalServerStatus] = useState('checking');
+  const [dbEcosystem, setDbEcosystem] = useState('checking');
+  const [globalDbStatus, setGlobalDbStatus] = useState('checking');
+  const [localDbStatus, setLocalDbStatus] = useState('checking');
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -32,6 +35,42 @@ const ChatWindow = ({ chatId }) => {
   const last10Messages = messages.slice(-10);
   const tokenCount = Math.ceil(last10Messages.reduce((acc, msg) => acc + (msg.message || '').split(/\s+/).length, 0) * 1.3);
   const tokenPercentage = Math.min((tokenCount / 4096) * 100, 100);
+
+  useEffect(() => {
+    const fetchDbStatus = async () => {
+      try {
+        const res = await fetch(`${API_URL}/ecosystem/status`);
+        const data = await res.json();
+        setDbEcosystem(data.active);
+        setGlobalDbStatus(data.globalStatus);
+        setLocalDbStatus(data.localStatus);
+      } catch (e) {
+        setDbEcosystem('offline');
+        setGlobalDbStatus('offline');
+        setLocalDbStatus('offline');
+      }
+    };
+    
+    fetchDbStatus();
+    const interval = setInterval(fetchDbStatus, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const switchDb = async (target) => {
+    try {
+      const res = await fetch(`${API_URL}/ecosystem/switch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDbEcosystem(data.active);
+      }
+    } catch (e) {
+      console.error('Failed to switch DB:', e);
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem("selectedModelId", selectedModel);
@@ -202,8 +241,54 @@ const ChatWindow = ({ chatId }) => {
             <p className="text-xs text-zinc-500 font-medium">
               Powered by {AI_MODELS.find(m => m.id === selectedModel)?.name || "NVIDIA AI"}
             </p>
+            {/* Dual DB Visualizer & Switcher */}
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-50 border border-zinc-200" title="Database Ecosystem Status">
+              <div className="flex items-center gap-1.5 border-r border-zinc-200 pr-2">
+                <span className="relative flex h-2 w-2">
+                  {globalDbStatus === 'online' && <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>}
+                  {globalDbStatus === 'offline' && <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>}
+                  {globalDbStatus === 'checking' && <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-400 animate-pulse"></span>}
+                </span>
+                <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">Global</span>
+              </div>
+              <div className="flex items-center gap-1.5 border-r border-zinc-200 pr-2">
+                <span className="relative flex h-2 w-2">
+                  {localDbStatus === 'online' && <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>}
+                  {localDbStatus === 'offline' && <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>}
+                  {localDbStatus === 'checking' && <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-400 animate-pulse"></span>}
+                </span>
+                <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">Local</span>
+              </div>
+              <div className="flex items-center pl-1">
+                <button
+                  onClick={() => {
+                    if (dbEcosystem === 'global' && localDbStatus === 'online') {
+                      switchDb('local');
+                    } else if (dbEcosystem === 'local' && globalDbStatus === 'online') {
+                      switchDb('global');
+                    }
+                  }}
+                  disabled={
+                    (dbEcosystem === 'global' && localDbStatus !== 'online') || 
+                    (dbEcosystem === 'local' && globalDbStatus !== 'online') ||
+                    dbEcosystem === 'checking' || dbEcosystem === 'offline' || dbEcosystem === 'disconnected'
+                  }
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${
+                    dbEcosystem === 'global' 
+                      ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 cursor-pointer' 
+                      : dbEcosystem === 'local' 
+                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-pointer'
+                        : 'bg-zinc-100 text-zinc-500 cursor-not-allowed'
+                  }`}
+                  title={dbEcosystem === 'global' ? "Active: Global. Click to switch to Local" : "Active: Local. Click to switch to Global"}
+                >
+                  ACTIVE: {dbEcosystem === 'global' ? 'GLOBAL' : dbEcosystem === 'local' ? 'LOCAL' : 'NONE'}
+                </button>
+              </div>
+            </div>
+            
             {selectedModel === 'local-gguf' && (
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200">
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200" title="Local Model Server Status">
                 <span className="relative flex h-2 w-2">
                   {localServerStatus === 'online' && (
                     <>
@@ -219,7 +304,7 @@ const ChatWindow = ({ chatId }) => {
                   )}
                 </span>
                 <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">
-                  {localServerStatus === 'online' ? 'Online' : localServerStatus === 'offline' ? 'Offline' : 'Checking'}
+                  AI: {localServerStatus === 'online' ? 'Online' : localServerStatus === 'offline' ? 'Offline' : 'Checking'}
                 </span>
               </div>
             )}

@@ -33,6 +33,38 @@ app.use(cors({
 
 app.use(express.json());
 
+let activeDbEcosystem = 'disconnected';
+let dbStatuses = { global: 'checking', local: 'checking' };
+
+const pingDatabases = async () => {
+  const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+  const LOCAL_MONGODB_URI = process.env.LOCAL_MONGODB_URI || 'mongodb://localhost:27017/chatbot';
+
+  if (MONGODB_URI) {
+    try {
+      const conn = await mongoose.createConnection(MONGODB_URI).asPromise();
+      await conn.close();
+      dbStatuses.global = 'online';
+    } catch (e) {
+      dbStatuses.global = 'offline';
+    }
+  } else {
+    dbStatuses.global = 'offline';
+  }
+
+  try {
+    const conn = await mongoose.createConnection(LOCAL_MONGODB_URI).asPromise();
+    await conn.close();
+    dbStatuses.local = 'online';
+  } catch (e) {
+    dbStatuses.local = 'offline';
+  }
+};
+
+// Initial ping
+pingDatabases();
+setInterval(pingDatabases, 15000); // Check every 15 seconds
+
 // MongoDB Connection
 const connectDB = async () => {
   const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
@@ -42,6 +74,7 @@ const connectDB = async () => {
     if (MONGODB_URI) {
       console.log('Attempting to connect to global MongoDB Atlas...');
       await mongoose.connect(MONGODB_URI);
+      activeDbEcosystem = 'global';
       console.log('✅ Connected to global MongoDB');
     } else {
       throw new Error('No global MONGODB_URI provided');
@@ -51,8 +84,10 @@ const connectDB = async () => {
     console.log('🔌 Falling back to local MongoDB (Ghost Mode)...');
     try {
       await mongoose.connect(LOCAL_MONGODB_URI);
+      activeDbEcosystem = 'local';
       console.log('✅ Connected to local MongoDB (Ghost Mode)');
     } catch (localErr) {
+      activeDbEcosystem = 'disconnected';
       console.error('❌ Local MongoDB connection also failed. Please ensure MongoDB is installed and running locally:', localErr.message);
     }
   }
@@ -251,6 +286,7 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
       } else {
         const targetModel = model || "meta/llama-3.2-11b-vision-instruct";
         console.log(`[DEBUG] Routing to NVIDIA API for model: ${targetModel}`);
+        
         completion = await openai.chat.completions.create({
           model: targetModel,
           messages: messagesForAI,
@@ -267,10 +303,11 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
         }
       }
 
-      // Handle empty bot reply (e.g. due to context limit exceeded in local models)
+      // Handle empty bot reply without crashing
       if (!botReply || botReply.trim() === '') {
-        botReply = "⚠️ **Generation Failed**\n\nThe AI model did not return any response. This usually happens if the conversation has exceeded the model's maximum context limit (e.g. 4096 tokens for this local model). Please start a new chat or shorten your prompt.";
-        res.write(`data: ${JSON.stringify({ type: 'chunk', text: botReply })}\n\n`);
+        console.warn(`[WARNING] Empty response from model ${model}. Probably context limit.`);
+        res.write(`data: ${JSON.stringify({ type: 'error_fatal' })}\n\n`);
+        return res.end();
       }
 
       // Log snippet to terminal
@@ -334,6 +371,46 @@ app.get('/api/ollama/status', async (req, res) => {
     return res.json({ status: 'offline' });
   } catch (error) {
     return res.json({ status: 'offline' });
+  }
+});
+
+// Endpoint to check current DB ecosystem status
+app.get('/api/ecosystem/status', (req, res) => {
+  res.json({ 
+    active: activeDbEcosystem,
+    globalStatus: dbStatuses.global,
+    localStatus: dbStatuses.local
+  });
+});
+
+app.post('/api/ecosystem/switch', async (req, res) => {
+  try {
+    const { target } = req.body;
+    if (target !== 'global' && target !== 'local') {
+      return res.status(400).json({ error: 'Invalid target' });
+    }
+
+    if (target === activeDbEcosystem) {
+      return res.json({ success: true, active: activeDbEcosystem });
+    }
+
+    const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+    const LOCAL_MONGODB_URI = process.env.LOCAL_MONGODB_URI || 'mongodb://localhost:27017/chatbot';
+
+    const uri = target === 'global' ? MONGODB_URI : LOCAL_MONGODB_URI;
+    if (!uri) {
+      return res.status(400).json({ error: `No URI configured for ${target}` });
+    }
+
+    await mongoose.disconnect();
+    await mongoose.connect(uri);
+    activeDbEcosystem = target;
+    console.log(`✅ Manually switched to ${target} MongoDB`);
+    
+    res.json({ success: true, active: activeDbEcosystem });
+  } catch (error) {
+    console.error(`Failed to switch to ${req.body.target} DB:`, error);
+    res.status(500).json({ error: 'Failed to switch database' });
   }
 });
 
