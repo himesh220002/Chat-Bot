@@ -33,7 +33,7 @@ function App() {
 
   return (
     <div className="flex h-screen bg-white text-zinc-900 font-sans overflow-hidden">
-      
+
       {/* Sidebar (Chat List) */}
       <aside
         className={`fixed lg:static top-0 left-0 h-full w-72 bg-zinc-50 border-r border-zinc-200 flex flex-col transform transition-transform duration-300 ease-in-out z-40
@@ -41,8 +41,8 @@ function App() {
       >
         <div className="p-5 flex items-center justify-between border-b border-zinc-200">
           <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-            <span className="w-6 h-6 rounded bg-zinc-900 text-white flex items-center justify-center text-sm font-bold shadow-sm">C</span>
-            ChatVerse
+            <span className="w-6 h-6 rounded bg-zinc-900 text-white flex items-center justify-center text-xs font-bold shadow-sm">&gt;_</span>
+            inputchat
           </h2>
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-1.5 text-zinc-500 hover:text-zinc-900 rounded-md hover:bg-zinc-200 transition-colors">
             <X size={20} />
@@ -88,7 +88,7 @@ function App() {
 
       {/* Mobile overlay */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-zinc-900/20 backdrop-blur-sm z-30 lg:hidden transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />

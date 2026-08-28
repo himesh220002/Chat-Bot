@@ -265,10 +265,23 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
 
     // Fetch previous context
     const recentMessages = await Message.find({ chat_id: chatId }).sort({ createdAt: 1 }).limit(10);
-    const messagesForAI = recentMessages.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'assistant',
-      content: msg.message
-    }));
+    const messagesForAI = [
+      {
+        role: 'system',
+        content: `You are an advanced AI assistant. You must strictly follow these formatting guidelines:
+1. Code Blocks: Use Markdown fenced code blocks with the specific language identifier (e.g., \`\`\`python).
+2. Structured Data: Wrap JSON, YAML, or CSV in language-specific markdown code blocks. No decorative emojis inside blocks.
+3. Professional Correspondence (Emails & Letters): Use standard blocked paragraph text. Structure with Subject, Salutation, Body (left-aligned, single blank lines between paragraphs), and Sign-off.
+4. Technical Documentation & Guides: Use hierarchical Markdown headers (#, ##, ###), bolding (**text**) for emphasis, inline code variables (\`variable\`), and horizontal rules (---).
+5. Lyrics & Poetry: Output lyrics with clean, single line breaks between lines, and double line breaks between verses/choruses.
+6. Diagrams: Use mermaid.js syntax wrapped in \`\`\`mermaid code blocks to draw flowcharts, state diagrams, and other visual graphs when requested.
+7. Math & Formulas: Always use $$ ... $$ for block math equations and $ ... $ for inline math. NEVER use \\[ \\] or \\( \\).`
+      },
+      ...recentMessages.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.message
+      }))
+    ];
 
     // Call AI Model
     let completion;
