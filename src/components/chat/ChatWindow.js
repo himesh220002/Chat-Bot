@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -334,14 +334,14 @@ const CodeBlock = ({ node, inline, className, children, isStreaming, ...props })
 
 const MarkdownComponents = {
   code: CodeBlock,
-  h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-4 text-zinc-900 border-b border-zinc-200 pb-2" {...props} />,
-  h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-3 text-zinc-900" {...props} />,
-  h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2 text-zinc-900" {...props} />,
-  p: ({ node, ...props }) => <p className="mb-4 last:mb-0 leading-relaxed" {...props} />,
-  ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
-  ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
-  li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-  a: ({ node, ...props }) => <a className="text-blue-600 hover:text-blue-700 hover:underline font-medium" target="_blank" rel="noopener noreferrer" {...props} />,
+  h1: ({ node, children, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-4 text-zinc-900 border-b border-zinc-200 pb-2" {...props}>{children}</h1>,
+  h2: ({ node, children, ...props }) => <h2 className="text-xl font-bold mt-5 mb-3 text-zinc-900" {...props}>{children}</h2>,
+  h3: ({ node, children, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2 text-zinc-900" {...props}>{children}</h3>,
+  p: ({ node, children, ...props }) => <p className="mb-4 last:mb-0 leading-relaxed" {...props}>{children}</p>,
+  ul: ({ node, children, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props}>{children}</ul>,
+  ol: ({ node, children, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props}>{children}</ol>,
+  li: ({ node, children, ...props }) => <li className="pl-1" {...props}>{children}</li>,
+  a: ({ node, children, ...props }) => <a className="text-blue-600 hover:text-blue-700 hover:underline font-medium" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>,
   blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-zinc-300 pl-4 py-1 my-4 text-zinc-600 bg-zinc-50 rounded-r-lg italic" {...props} />,
   table: ({ node, ...props }) => <div className="overflow-x-auto mb-4 border border-zinc-200 rounded-lg shadow-sm"><table className="w-full text-left border-collapse text-sm" {...props} /></div>,
   thead: ({ node, ...props }) => <thead className="bg-zinc-100/80 border-b border-zinc-200" {...props} />,
