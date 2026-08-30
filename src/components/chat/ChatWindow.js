@@ -852,7 +852,7 @@ const ChatWindow = ({ chatId }) => {
                   <button
                     type="submit"
                     disabled={!newMessage.trim()}
-                    className="w-10 h-10 rounded-[12px] bg-cyan-400 text-black hover:bg-cyan-300 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 border border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)] flex items-center justify-center transition-all hover:scale-[1.03] active:scale-95"
+                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] bg-cyan-400 text-black hover:bg-cyan-300 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 border border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)] flex items-center justify-center transition-all hover:scale-[1.03] active:scale-95"
                   >
                     <Send size={16} className="ml-0.5" />
                   </button>
