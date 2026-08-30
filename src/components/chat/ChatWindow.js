@@ -277,7 +277,7 @@ const ChartRenderer = ({ configStr }) => {
       }
     };
     return (
-      <div className="w-full my-6 sci-panel sci-panel-cut-sm border-cyan-400/20 bg-[rgba(8,30,40,0.75)] p-5 overflow-hidden">
+      <div className="w-full my-6 sci-panel sci-panel-cut-sm border-cyan-400/20 bg-[rgba(8,30,40,0.75)] p-5 overflow-auto">
         <span className="corners"><i /><i /><i /><i /></span>
         {title && <h3 className="display text-sm tracking-[0.18em] text-center text-cyan-200 mb-4">{title.toUpperCase()}</h3>}
         <div className="h-[360px] w-full min-w-[420px]">
@@ -374,7 +374,7 @@ const MarkdownComponents = {
   p: ({ node, children, ...props }) => <p className="mb-3 lg:mb-4 last:mb-0 leading-6 lg:leading-7 text-white raj text-[13px] lg:text-[15.5px] font-medium tracking-[0.01em]" {...props}>{children}</p>,
   ul: ({ node, children, ...props }) => <ul className="list-none pl-0 mb-4 lg:mb-5 space-y-1.5 lg:space-y-2" {...props}>{children}</ul>,
   ol: ({ node, children, ...props }) => <ol className="list-decimal pl-5 lg:pl-6 mb-4 lg:mb-5 space-y-1.5 lg:space-y-2 marker:text-white marker:font-bold text-[13px] lg:text-[14px]" {...props}>{children}</ol>,
-  li: ({ node, children, ...props }) => <li className="pl-1 raj text-white font-medium text-[13px] lg:text-[15px] leading-6 lg:leading-7 flex gap-2 lg:gap-2.5 before:content-['▸'] before:text-white before:font-bold before:mono before:text-xs lg:before:text-sm before:mt-0.5" {...props}>{children}</li>,
+  li: ({ node, children, ...props }) => <li className="pl-1 raj text-white font-medium text-[13px] lg:text-[15px] leading-6 lg:leading-7 flex flex-wrap gap-2 lg:gap-2.5 before:content-['▸'] before:text-white before:font-bold before:mono before:text-xs lg:before:text-sm before:mt-0.5" {...props}>{children}</li>,
   a: ({ node, children, ...props }) => <a className="text-cyan-300 hover:text-white hover:underline decoration-white/30 underline-offset-4 font-semibold" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>,
   blockquote: ({ node, ...props }) => <blockquote className="border-l-[3px] border-white pl-5 py-3 my-5 bg-white/[0.06] mono text-[14px] leading-6 text-white font-medium" style={{ clipPath: 'polygon(4px 0,100% 0,100% calc(100% - 4px), calc(100% - 4px) 100%,0 100%,0 4px)' }} {...props} />,
   table: ({ node, ...props }) => <div className="overflow-x-auto mb-4 sci-panel sci-panel-cut-sm border-cyan-400/20"><table className="w-full text-left border-collapse text-sm raj" {...props} /></div>,
@@ -394,21 +394,21 @@ const AutoResizeTextarea = ({ newMessage, setNewMessage, handleSendMessage, send
   }, [newMessage]);
 
   return (
-              <textarea
-                ref={textareaRef}
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage(e);
-                  }
-                }}
-                placeholder="Transmit to orbital intelligence..."
-                className="flex-1 bg-transparent border-0 text-white placeholder:text-cyan-100/35 pl-3 lg:pl-2 pr-12 lg:pr-14 py-2.5 lg:py-3.5 focus:ring-0 resize-none max-h-32 min-h-[44px] lg:min-h-[52px] scrollbar-thin mono text-[13px] lg:text-sm tracking-wide outline-none"
-                disabled={sending}
-                rows={1}
-              />
+    <textarea
+      ref={textareaRef}
+      value={newMessage}
+      onChange={(e) => setNewMessage(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSendMessage(e);
+        }
+      }}
+      placeholder="Transmit to orbital intelligence..."
+      className="flex-1 bg-transparent border-0 text-white placeholder:text-cyan-100/35 pl-3 lg:pl-2 pr-12 lg:pr-14 py-2.5 lg:py-3.5 focus:ring-0 resize-none max-h-32 min-h-[44px] lg:min-h-[52px] scrollbar-thin mono text-[13px] lg:text-sm tracking-wide outline-none"
+      disabled={sending}
+      rows={1}
+    />
   );
 };
 
@@ -739,7 +739,7 @@ const ChatWindow = ({ chatId }) => {
               const isUser = msg.role === 'user';
               return (
                 <div key={msg._id || index} className={`flex ${isUser ? "justify-end" : "justify-start"} animate-fade-in-up`} style={{ transformStyle: 'preserve-3d' }}>
-                  <div className={`flex ${isUser ? "max-w-[88%] lg:max-w-[72%] flex-row-reverse" : "max-w-[96%] lg:max-w-[84%] flex-row w-full"} gap-3 items-end`} style={{ transformStyle: 'preserve-3d' }}>
+                  <div className={`flex ${isUser ? "max-w-[88%] lg:max-w-[90%] flex-col 2xl:flex-row-reverse items-end" : "max-w-[96%] lg:max-w-[90%] flex-col 2xl:flex-row w-full items-start 2xl:items-end"} gap-3 `} style={{ transformStyle: 'preserve-3d' }}>
                     {/* Avatar – floating hologram marker */}
                     <div className={`w-8 h-8 rounded-[10px] flex-shrink-0 flex items-center justify-center border relative overflow-hidden backdrop-blur ${isUser ? "bg-cyan-400 text-black border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)]" : "bg-white/[0.06] border-white/10 text-cyan-200 shadow-[0_0_16px_rgba(0,234,255,0.12)]"
                       }`}>
@@ -748,7 +748,7 @@ const ChatWindow = ({ chatId }) => {
                     </div>
 
                     {/* Message Bubble — responsive sharp */}
-                    <div data-index={index % 4} className={`holo-msg relative px-3 lg:px-5 py-2.5 lg:py-3.5 leading-relaxed text-[12.5px] lg:text-[14.5px] overflow-hidden
+                    <div data-index={index % 4} className={`holo-msg relative px-3 lg:px-5 py-2.5 lg:py-3.5 leading-relaxed text-[12.5px] lg:text-[14.5px] overflow-auto max-w-full min-w-0
                       ${isUser
                         ? "sci-msg-user raj font-medium holo-msg-user"
                         : "sci-msg-bot"
