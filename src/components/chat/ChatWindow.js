@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, Cpu, Radio, Activity, Database, ShieldCheck, Orbit, Sparkles, Terminal, Crosshair } from "lucide-react";
+import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, Cpu, Radio, Activity, ShieldCheck, Orbit, Sparkles, Terminal, Crosshair } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';

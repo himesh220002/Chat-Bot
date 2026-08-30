@@ -3,7 +3,7 @@ import { useAuth } from './context/AuthContext';
 import AuthForm from './components/AuthForm';
 import ChatList from './components/chat/ChatList';
 import ChatWindow from './components/chat/ChatWindow';
-import { Menu, X, Zap, Activity, Crosshair, Radio, Heart, Map as MapIcon, Box, Camera, KeyRound, ShieldCheck, Gauge, ChevronRight } from "lucide-react";
+import { Menu, X, Zap, Activity, Crosshair, Radio, Box, Camera, KeyRound, ShieldCheck, Gauge, ChevronRight } from "lucide-react";
 
 function App() {
   const { user, loading } = useAuth();
