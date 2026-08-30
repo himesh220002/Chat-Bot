@@ -368,13 +368,13 @@ const CodeBlock = ({ node, inline, className, children, isStreaming, ...props })
 
 const MarkdownComponents = {
   code: CodeBlock,
-  h1: ({ node, children, ...props }) => <h1 className="display text-[22px] font-extrabold mt-7 mb-4 text-white border-b border-white/10 pb-3 tracking-wide leading-tight" {...props}>{children}</h1>,
-  h2: ({ node, children, ...props }) => <h2 className="display text-[18px] font-bold mt-6 mb-3 text-white tracking-wide leading-snug" {...props}>{children}</h2>,
-  h3: ({ node, children, ...props }) => <h3 className="display text-[16px] font-bold mt-5 mb-3 text-white tracking-wide" {...props}>{children}</h3>,
-  p: ({ node, children, ...props }) => <p className="mb-4 last:mb-0 leading-7 text-white raj text-[15.5px] font-medium tracking-[0.01em]" {...props}>{children}</p>,
-  ul: ({ node, children, ...props }) => <ul className="list-none pl-0 mb-5 space-y-2" {...props}>{children}</ul>,
-  ol: ({ node, children, ...props }) => <ol className="list-decimal pl-6 mb-5 space-y-2 marker:text-white marker:font-bold" {...props}>{children}</ol>,
-  li: ({ node, children, ...props }) => <li className="pl-1 raj text-white font-medium text-[15px] leading-7 flex gap-2.5 before:content-['▸'] before:text-white before:font-bold before:mono before:text-sm before:mt-0.5" {...props}>{children}</li>,
+  h1: ({ node, children, ...props }) => <h1 className="display text-[18px] lg:text-[22px] font-extrabold mt-5 lg:mt-7 mb-3 lg:mb-4 text-white border-b border-white/10 pb-2 lg:pb-3 tracking-wide leading-tight" {...props}>{children}</h1>,
+  h2: ({ node, children, ...props }) => <h2 className="display text-[15px] lg:text-[18px] font-bold mt-4 lg:mt-6 mb-2 lg:mb-3 text-white tracking-wide leading-snug" {...props}>{children}</h2>,
+  h3: ({ node, children, ...props }) => <h3 className="display text-[14px] lg:text-[16px] font-bold mt-4 lg:mt-5 mb-2 lg:mb-3 text-white tracking-wide" {...props}>{children}</h3>,
+  p: ({ node, children, ...props }) => <p className="mb-3 lg:mb-4 last:mb-0 leading-6 lg:leading-7 text-white raj text-[13px] lg:text-[15.5px] font-medium tracking-[0.01em]" {...props}>{children}</p>,
+  ul: ({ node, children, ...props }) => <ul className="list-none pl-0 mb-4 lg:mb-5 space-y-1.5 lg:space-y-2" {...props}>{children}</ul>,
+  ol: ({ node, children, ...props }) => <ol className="list-decimal pl-5 lg:pl-6 mb-4 lg:mb-5 space-y-1.5 lg:space-y-2 marker:text-white marker:font-bold text-[13px] lg:text-[14px]" {...props}>{children}</ol>,
+  li: ({ node, children, ...props }) => <li className="pl-1 raj text-white font-medium text-[13px] lg:text-[15px] leading-6 lg:leading-7 flex gap-2 lg:gap-2.5 before:content-['▸'] before:text-white before:font-bold before:mono before:text-xs lg:before:text-sm before:mt-0.5" {...props}>{children}</li>,
   a: ({ node, children, ...props }) => <a className="text-cyan-300 hover:text-white hover:underline decoration-white/30 underline-offset-4 font-semibold" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>,
   blockquote: ({ node, ...props }) => <blockquote className="border-l-[3px] border-white pl-5 py-3 my-5 bg-white/[0.06] mono text-[14px] leading-6 text-white font-medium" style={{ clipPath: 'polygon(4px 0,100% 0,100% calc(100% - 4px), calc(100% - 4px) 100%,0 100%,0 4px)' }} {...props} />,
   table: ({ node, ...props }) => <div className="overflow-x-auto mb-4 sci-panel sci-panel-cut-sm border-cyan-400/20"><table className="w-full text-left border-collapse text-sm raj" {...props} /></div>,
@@ -394,21 +394,21 @@ const AutoResizeTextarea = ({ newMessage, setNewMessage, handleSendMessage, send
   }, [newMessage]);
 
   return (
-    <textarea
-      ref={textareaRef}
-      value={newMessage}
-      onChange={(e) => setNewMessage(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          handleSendMessage(e);
-        }
-      }}
-      placeholder="Transmit to orbital intelligence..."
-      className="flex-1 bg-transparent border-0 text-white placeholder:text-cyan-100/35 pl-4 lg:pl-2 pr-14 py-3.5 focus:ring-0 resize-none max-h-32 min-h-[52px] scrollbar-thin font-mono text-sm tracking-wide outline-none"
-      disabled={sending}
-      rows={1}
-    />
+              <textarea
+                ref={textareaRef}
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage(e);
+                  }
+                }}
+                placeholder="Transmit to orbital intelligence..."
+                className="flex-1 bg-transparent border-0 text-white placeholder:text-cyan-100/35 pl-3 lg:pl-2 pr-12 lg:pr-14 py-2.5 lg:py-3.5 focus:ring-0 resize-none max-h-32 min-h-[44px] lg:min-h-[52px] scrollbar-thin mono text-[13px] lg:text-sm tracking-wide outline-none"
+                disabled={sending}
+                rows={1}
+              />
   );
 };
 
@@ -715,8 +715,8 @@ const ChatWindow = ({ chatId }) => {
         </div>
       </div>
 
-      {/* Messages Area — floating in air viewport */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 scrollbar-thin scroll-smooth relative" style={{ transformStyle: 'preserve-3d' }}>
+      {/* Messages Area — responsive */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 lg:p-4 scrollbar-thin scroll-smooth relative" style={{ transformStyle: 'preserve-3d' }}>
         {/* subtle grid overlay + floating depth haze */}
         <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: `linear-gradient(rgba(0,234,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(0,234,255,0.6) 1px, transparent 1px)`, backgroundSize: '40px 40px' }} />
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(600px 300px at 50% 42%, rgba(0,234,255,0.06), transparent 70%)' }} />
@@ -747,8 +747,8 @@ const ChatWindow = ({ chatId }) => {
                       {!isUser && <span className="absolute inset-0 bg-cyan-400/8 animate-pulse" />}
                     </div>
 
-                    {/* Message Bubble — FLOATING IN AIR holo cards */}
-                    <div data-index={index % 4} className={`holo-msg relative px-4 lg:px-5 py-3.5 leading-relaxed text-[14.5px] overflow-hidden
+                    {/* Message Bubble — responsive sharp */}
+                    <div data-index={index % 4} className={`holo-msg relative px-3 lg:px-5 py-2.5 lg:py-3.5 leading-relaxed text-[12.5px] lg:text-[14.5px] overflow-hidden
                       ${isUser
                         ? "sci-msg-user raj font-medium holo-msg-user"
                         : "sci-msg-bot"

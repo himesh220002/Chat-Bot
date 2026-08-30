@@ -426,11 +426,25 @@ body {
   .cinema-wrapper {
     padding: 0;
   }
+  .cinema-content {
+    flex-direction: column !important;
+    gap: 0 !important;
+    padding: 0 !important;
+  }
+  .cinema-content > main {
+    width: 100% !important;
+    flex: 1 1 auto !important;
+  }
 }
 
 @media(max-width:1280px) {
   .cinema-wrapper {
     padding: 48px 8px 6px;
+  }
+}
+@media(max-width:1024px) {
+  .cinema-wrapper {
+    padding-top: 0 !important;
   }
 }
 
@@ -553,10 +567,7 @@ body {
   }
 }
 
-.cinema-content>* {
-  position: relative;
-  z-index: 2;
-}
+
 
 .cockpit-top-beam {
   position: absolute;

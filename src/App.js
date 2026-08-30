@@ -95,6 +95,12 @@ function App() {
           <div className="cockpit-top-beam hidden lg:block" />
 
           <div className="cinema-content">
+            {isSidebarOpen && (
+              <div
+                className="fixed inset-0 bg-black/65 backdrop-blur-[2px] z-20 lg:hidden"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+            )}
             {/* Left screen — attached to left side wall with same angle (Image 1) — tilt on inner wrapper to avoid drawer conflict */}
             <aside
               className={`fixed lg:static top-0 left-0 h-full w-[86vw] max-w-[360px] lg:w-auto flex flex-col z-30 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:shrink-0
@@ -157,21 +163,21 @@ function App() {
             {/* Center — big screen (triple-screen middle) */}
             <main className="flex-1 flex flex-col relative min-w-0 min-h-0 z-10 triple-center">
               {!isSidebarOpen && (
-                <div className="lg:hidden relative mx-3 mt-3 glass-holo px-3 py-2.5 flex items-center justify-between overflow-hidden z-20">
+                <div className="lg:hidden sticky top-0 z-20 bg-[#0f1923] border-b border-[#ff4655]/15 px-3 py-2.5 flex items-center gap-3 shrink-0">
                   <button
                     onClick={() => setIsSidebarOpen(true)}
-                    className="w-9 h-9 rounded-[12px] bg-cyan-400/15 border border-cyan-400/20 text-cyan-200 flex items-center justify-center hover:bg-cyan-400/25 transition-colors"
+                    className="w-9 h-9 bg-[#ff4655] text-white flex items-center justify-center shrink-0 hover:bg-[#e03a4a] transition-colors"
+                    style={{clipPath:'polygon(5px 0,100% 0,100% calc(100% - 5px), calc(100% - 5px) 100%,0 100%,0 5px)'}}
+                    aria-label="Open menu"
                   >
-                    <Menu size={16} />
+                    <Menu size={18} />
                   </button>
-                  <span className="display text-xs tracking-[0.2em] text-white/90 flex items-center gap-2"><Crosshair size={14} className="text-cyan-400/60" /> FLIGHT DECK</span>
-                  <div className="w-9 h-9 rounded-[12px] bg-white/5 border border-white/10 flex items-center justify-center">
-                    <Crosshair size={16} className="text-cyan-400/60 animate-pulse" />
-                  </div>
+                  <span className="valorant-header text-[13px] tracking-[0.06em] text-[#ece8e1]">INPUTCHAT</span>
+                  <span className="ml-auto valorant-label text-[9px] tracking-wide text-white/35">FLIGHT DECK</span>
                 </div>
               )}
 
-              <div className="flex-1 p-2 flex flex-col min-h-0 relative">
+              <div className="flex-1 p-0 lg:p-2 flex flex-col min-h-0 relative">
                 <div className="hidden lg:block float-shadow" />
                 <div className="flex-1 min-h-0 flex flex-col relative glass-holo overflow-hidden">
                   {/* subtle grid overlay inside main */}
@@ -369,13 +375,6 @@ function App() {
             </aside>
           </div>
         </div>
-
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/65 backdrop-blur-[2px] z-20 lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
       </div>
     </>
   );
