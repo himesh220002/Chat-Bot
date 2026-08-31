@@ -296,7 +296,8 @@ const ChartRenderer = ({ configStr }) => {
     return (
       <div className="w-full my-5 sci-panel sci-panel-cut-sm border-cyan-400/20 bg-[rgba(8,30,40,0.85)] p-2 sm:p-5 overflow-hidden relative">
         <span className="corners"><i /><i /><i /><i /></span>
-        {title && <h3 className="display text-xs sm:text-sm tracking-[0.18em] text-center text-cyan-200 mb-2 mt-1">{title.toUpperCase()}</h3>}
+        {title && <h3 className="display text-xs sm:text-sm tracking-[0.18em] text-wrap
+         text-center text-cyan-200 mb-2 mt-1">{title.toUpperCase()}</h3>}
         <div className="w-full overflow-x-auto scrollbar-thin pl-1 pr-2 py-1 relative z-10">
           <div className="h-[340px] w-full min-w-[320px] sm:min-w-[420px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -871,11 +872,11 @@ const ChatWindow = ({ chatId }) => {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0">
-      {/* Header – floating glass command bar with sharp 45° chamfer top cut */}
-      <div className="relative z-40 px-3 lg:px-5 py-3 border-b border-white/8 bg-gradient-to-r from-white/[0.04] via-transparent to-white/[0.02] backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0" style={{ clipPath: 'polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%, 0 14px)' }}>
+      {/* Header – floating glass command bar */}
+      <div className="relative z-40 px-3 lg:px-5 py-3 border-b border-white/8 bg-gradient-to-r from-white/[0.04] via-transparent to-white/[0.02] backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0 rounded-t-[22px]">
         <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <div className="flex items-center gap-4 min-w-0">
-          <div className="hidden lg:flex w-10 h-10 sci-panel-cut-sm bg-cyan-400/15 border border-white/10 items-center justify-center backdrop-blur">
+          <div className="hidden lg:flex w-10 h-10 rounded-[12px] bg-cyan-400/15 border border-white/10 items-center justify-center backdrop-blur">
             <Crosshair size={16} className="text-cyan-300" />
           </div>
           <div className="min-w-0">
@@ -884,11 +885,11 @@ const ChatWindow = ({ chatId }) => {
             </h3> */}
             <div className="flex flex-wrap items-center gap-2 mt-1">
               {/* DB cluster HUD — single row button toggle with status LED */}
-              <div className="flex items-center gap-1.5 p-1 sci-panel-cut-sm bg-white/[0.04] backdrop-blur border border-white/10 shadow-md">
+              <div className="flex items-center gap-1.5 p-1 rounded-full bg-white/[0.04] backdrop-blur border border-white/10 shadow-md">
                 <button
                   onClick={() => switchDb('global')}
                   disabled={globalDbStatus !== 'online' || dbEcosystem === 'checking'}
-                  className={`mono text-[9.5px] font-bold px-3 py-1 sci-panel-cut-sm transition-all border flex items-center gap-1.5 ${dbEcosystem === 'global'
+                  className={`mono text-[9.5px] font-bold px-3 py-1 rounded-full transition-all border flex items-center gap-1.5 ${dbEcosystem === 'global'
                     ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
                     : 'bg-transparent text-white/50 border-transparent hover:bg-white/[0.06] hover:text-white/80'
                     } ${globalDbStatus !== 'online' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
@@ -905,7 +906,7 @@ const ChatWindow = ({ chatId }) => {
                 <button
                   onClick={() => switchDb('local')}
                   disabled={localDbStatus !== 'online' || dbEcosystem === 'checking'}
-                  className={`mono text-[9.5px] font-bold px-3 py-1 sci-panel-cut-sm transition-all border flex items-center gap-1.5 ${dbEcosystem === 'local'
+                  className={`mono text-[9.5px] font-bold px-3 py-1 rounded-full transition-all border flex items-center gap-1.5 ${dbEcosystem === 'local'
                     ? 'bg-orange-500/25 text-orange-300 border-orange-400/60 shadow-[0_0_12px_rgba(249,115,22,0.35)]'
                     : 'bg-transparent text-white/50 border-transparent hover:bg-white/[0.06] hover:text-white/80'
                     } ${localDbStatus !== 'online' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
@@ -922,7 +923,7 @@ const ChatWindow = ({ chatId }) => {
 
               {/* Local AI Server Status Badge with Home Icon */}
               {(selectedModel.startsWith('local-') || selectedModel.includes('local')) && (
-                <span className={`flex items-center gap-1.5 mono text-[9.5px] font-bold tracking-widest px-3 py-1.5 sci-panel-cut-sm border backdrop-blur shadow-md ${localServerStatus === 'online'
+                <span className={`flex items-center gap-1.5 mono text-[9.5px] font-bold tracking-widest px-3 py-1.5 rounded-full border backdrop-blur shadow-md ${localServerStatus === 'online'
                   ? 'bg-emerald-500/15 border-emerald-400/30 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.25)]'
                   : localServerStatus === 'offline'
                     ? 'bg-red-500/15 border-red-400/30 text-red-300'
@@ -936,13 +937,13 @@ const ChatWindow = ({ chatId }) => {
           </div>
         </div>
 
-        {/* Custom Model Selector HUD — glass with 45° sharp chamfer cut */}
+        {/* Custom Model Selector HUD — glass with dark blue hover traveler */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="relative" ref={modelDropdownRef}>
             {/* Trigger Button */}
             <button
               onClick={() => setIsModelDropdownOpen((prev) => !prev)}
-              className="relative flex items-center justify-between sci-panel-cut-sm bg-white/[0.06] backdrop-blur border border-white/10 hover:border-cyan-400/40 text-white py-2 pl-3.5 pr-9 mono text-[.8rem] tracking-wide focus:outline-none focus:border-cyan-400/50 cursor-pointer min-w-[250px] max-w-[340px] truncate transition-all shadow-md"
+              className="relative flex items-center justify-between rounded-[12px] bg-white/[0.06] backdrop-blur border border-white/10 hover:border-cyan-400/40 text-white py-2 pl-3.5 pr-9 mono text-[.8rem] tracking-wide focus:outline-none focus:border-cyan-400/50 cursor-pointer min-w-[250px] max-w-[340px] truncate transition-all shadow-md"
             >
               <span className="truncate pr-2 font-medium">
                 {AI_MODELS.find((m) => m.id === selectedModel)?.name || "Select Model"}
@@ -954,9 +955,9 @@ const ChatWindow = ({ chatId }) => {
               />
             </button>
 
-            {/* Dropdown Menu Popup with 45° sharp chamfer cut */}
+            {/* Dropdown Menu Popup */}
             {isModelDropdownOpen && (
-              <div className="absolute lg:right-0 mt-2 w-[320px] max-h-[380px] overflow-y-auto sci-panel-cut-sm bg-[#07131e] border border-cyan-400/50 shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[100] py-1.5 scrollbar-thin divide-y divide-white/5">
+              <div className="absolute lg:right-0 mt-2 w-[320px] max-h-[380px] overflow-y-auto rounded-[14px] bg-[#07131e] border border-cyan-400/50 shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[100] py-1.5 scrollbar-thin divide-y divide-white/5">
                 {Array.from(new Set(AI_MODELS.map((m) => m.category))).map((cat) => (
                   <div key={cat} className="py-1">
                     {/* Category Header */}
@@ -1186,13 +1187,13 @@ const ChatWindow = ({ chatId }) => {
                   onPaste={handlePaste}
                 />
 
-                {/* action cluster with sharp 45° chamfer cut buttons */}
+                {/* action cluster */}
                 <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={sending || pendingImages.length >= 2}
-                    className="w-8 h-8 lg:w-10 lg:h-10 sci-panel-cut-sm bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-cyan-300 flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-40"
+                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-cyan-300 flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-40"
                     title={pendingImages.length >= 2 ? "Maximum 2 images attached" : "Attach temporary image (max 2 images, 5MB each)"}
                   >
                     <Paperclip size={16} />
@@ -1202,7 +1203,7 @@ const ChatWindow = ({ chatId }) => {
                     <button
                       type="button"
                       onClick={() => abortControllerRef.current?.abort()}
-                      className="sci-panel-cut-sm bg-red-500/15 border border-red-400/30 text-red-300 hover:bg-red-500/25 px-3 py-2 mono text-[11px] tracking-widest font-bold flex items-center gap-1.5 transition-colors backdrop-blur"
+                      className="rounded-[12px] bg-red-500/15 border border-red-400/30 text-red-300 hover:bg-red-500/25 px-3 py-2 mono text-[11px] tracking-widest font-bold flex items-center gap-1.5 transition-colors backdrop-blur"
                     >
                       <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" /> ABORT
                     </button>
@@ -1210,7 +1211,7 @@ const ChatWindow = ({ chatId }) => {
                     <button
                       type="submit"
                       disabled={(!newMessage.trim() && pendingImages.length === 0) || sending}
-                      className="w-8 h-8 lg:w-10 lg:h-10 sci-panel-cut-sm bg-cyan-400 text-black hover:bg-cyan-300 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 border border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)] flex items-center justify-center transition-all hover:scale-[1.03] active:scale-95"
+                      className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] bg-cyan-400 text-black hover:bg-cyan-300 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 border border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)] flex items-center justify-center transition-all hover:scale-[1.03] active:scale-95"
                     >
                       <Send size={16} className="ml-0.5" />
                     </button>
