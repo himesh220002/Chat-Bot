@@ -118,10 +118,10 @@ function App() {
                     <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#ff4655]" />
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="relative w-12 h-10 flex items-center justify-center">
-                          <div className="absolute inset-0 bg-[#ff4655] shadow-[0_0_12px_rgba(255,70,85,0.5)]" style={{ clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px), calc(100% - 6px) 100%,0 100%,0 6px)' }} />
-                          <span className="relative valorant-header text-white text-[20px] tracking-widest">&gt;_</span>
-                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#ece8e1] rounded-full border-2 border-[#0f1923]" />
+                        <div className="relative w-12 h-12 flex items-center justify-center">
+                          {/* <div className="absolute inset-0 bg-[#000] shadow-[0_0_12px_rgba(255,70,85,0.5)]" style={{ clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px), calc(100% - 6px) 100%,0 100%,0 6px)' }} /> */}
+                          <span className="relative text-[4px]"><img src="./inputchat.png" alt="" />_</span>
+                          {/* <div className="absolute -top-2 -right-1 w-3 h-3 bg-[#ece8e1] rounded-full border-2 border-[#0f1923]" /> */}
                         </div>
                         <div>
                           <h2 className="valorant-header text-[18px] tracking-[0.06em] valorant-beige leading-none">&gt;_ INPUT<span className="valorant-accent">CHAT</span></h2>

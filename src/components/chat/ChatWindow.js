@@ -957,7 +957,7 @@ const ChatWindow = ({ chatId }) => {
 
             {/* Dropdown Menu Popup */}
             {isModelDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-[320px] max-h-[380px] overflow-y-auto rounded-[14px] bg-[#07131e] border border-cyan-400/50 shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[100] py-1.5 scrollbar-thin divide-y divide-white/5">
+              <div className="absolute lg:right-0 mt-2 w-[320px] max-h-[380px] overflow-y-auto rounded-[14px] bg-[#07131e] border border-cyan-400/50 shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[100] py-1.5 scrollbar-thin divide-y divide-white/5">
                 {Array.from(new Set(AI_MODELS.map((m) => m.category))).map((cat) => (
                   <div key={cat} className="py-1">
                     {/* Category Header */}
