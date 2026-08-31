@@ -346,7 +346,7 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
           stream: true,
         };
 
-        completion = await openai.chat.completions.create(reqOptions);
+        completion = await openai.chat.completions.create(reqOptions, { timeout: 60000 });
       }
 
       let botReply = '';
@@ -383,7 +383,18 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
       res.end();
 
     } catch (apiError) {
-      if (apiError.status === 404 || apiError.status === 410) {
+      if (apiError.name === 'APIConnectionTimeoutError' || apiError.status === 408 || (apiError.message && apiError.message.toLowerCase().includes('timeout'))) {
+        console.warn(`[WARNING] Request to model ${model} timed out after 60s.`);
+        const botMessage = new Message({
+          chat_id: chatId,
+          user_id: req.user.userId,
+          message: `⚠️ **Free Endpoint Busy**\n\nThe NVIDIA free server for \`${model}\` is currently experiencing high load or queue times. Please try **Nemotron 3.5 Lightning** or **GPT-OSS 20B** for fast responses.`,
+          role: 'assistant'
+        });
+        await botMessage.save();
+        res.write(`data: ${JSON.stringify({ type: 'error', botMessage })}\n\n`);
+        res.end();
+      } else if (apiError.status === 404 || apiError.status === 410) {
         console.error(`[DEBUG] Model ${model} is currently unavailable or deprecated (status: ${apiError.status})`);
         const botMessage = new Message({
           chat_id: chatId,
