@@ -67,10 +67,11 @@ function App() {
 
   return (
     <>
-      {/* Background — 3D grid room (Image 1) + tunnel */}
+      {/* Background — Vast 3D Universe Far Behind */}
       <div className="bg-layers" aria-hidden>
         <div className="sci-bg" />
-        <div className="sci-grid" />
+        <div className="sci-stars-far" />
+        <div className="sci-stars-near" />
         <div className="sci-stars" />
         {/* 3D grid room side walls — same angle as side screens */}
         <div className="room-wall room-wall-left" />
@@ -117,13 +118,13 @@ function App() {
                     <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#ff4655]" />
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="relative w-10 h-10 flex items-center justify-center">
+                        <div className="relative w-12 h-10 flex items-center justify-center">
                           <div className="absolute inset-0 bg-[#ff4655] shadow-[0_0_12px_rgba(255,70,85,0.5)]" style={{ clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px), calc(100% - 6px) 100%,0 100%,0 6px)' }} />
-                          <span className="relative valorant-header text-white text-[18px] tracking-widest">&gt;_</span>
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-[#ece8e1] rounded-full border-2 border-[#0f1923]" />
+                          <span className="relative valorant-header text-white text-[20px] tracking-widest">&gt;_</span>
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#ece8e1] rounded-full border-2 border-[#0f1923]" />
                         </div>
                         <div>
-                          <h2 className="valorant-header text-[18px] tracking-[0.06em] valorant-beige leading-none">INPUT<span className="valorant-accent">CHAT</span></h2>
+                          <h2 className="valorant-header text-[18px] tracking-[0.06em] valorant-beige leading-none">&gt;_ INPUT<span className="valorant-accent">CHAT</span></h2>
                           <p className="valorant-label text-[10px] tracking-[0.16em] text-[#ece8e1]/60 mt-1 flex items-center gap-1.5"><Radio size={10} className="text-[#ff4655]" /> COCKPIT • MK-VII</p>
                         </div>
                       </div>
@@ -168,21 +169,19 @@ function App() {
                   <button
                     onClick={() => setIsSidebarOpen(true)}
                     className="w-9 h-9 bg-[#ff4655] text-white flex items-center justify-center shrink-0 hover:bg-[#e03a4a] transition-colors"
-                    style={{clipPath:'polygon(5px 0,100% 0,100% calc(100% - 5px), calc(100% - 5px) 100%,0 100%,0 5px)'}}
+                    style={{ clipPath: 'polygon(5px 0,100% 0,100% calc(100% - 5px), calc(100% - 5px) 100%,0 100%,0 5px)' }}
                     aria-label="Open menu"
                   >
                     <Menu size={18} />
                   </button>
-                  <span className="valorant-header text-[13px] tracking-[0.06em] text-[#ece8e1]">INPUTCHAT</span>
-                  <span className="ml-auto valorant-label text-[9px] tracking-wide text-white/35">FLIGHT DECK</span>
+                  <span className="valorant-header text-[12px] tracking-[0.06em] text-[#ece8e1]">&gt;_ inputChat</span>
+                  <span className="ml-auto valorant-label text-[9px] tracking-wide text-white/35">SPAWNING </span>
                 </div>
               )}
 
               <div className="flex-1 p-0 lg:p-2 flex flex-col min-h-0 relative">
                 <div className="hidden lg:block float-shadow" />
                 <div className="flex-1 min-h-0 flex flex-col relative glass-holo overflow-hidden">
-                  {/* subtle grid overlay inside main */}
-                  <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: `linear-gradient(rgba(0,234,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(0,234,255,0.6) 1px, transparent 1px)`, backgroundSize: '40px 40px' }} />
                   <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent opacity-60" />
                   {/* top HUD micro inside */}
                   <div className="hidden lg:flex absolute top-3 left-1/2 -translate-x-1/2 items-center gap-2 mono text-[9px] tracking-[0.18em] text-cyan-100/45 pointer-events-none z-10">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, Cpu, Radio, Activity, ShieldCheck, Orbit, Sparkles, Terminal, Crosshair, Paperclip, Image as ImageIcon, X, AlertCircle, Eye } from "lucide-react";
+import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, Cpu, Radio, Activity, ShieldCheck, Orbit, Sparkles, Terminal, Crosshair, Paperclip, Image as ImageIcon, X, AlertCircle, Home } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -47,22 +47,22 @@ const AI_MODELS = [
   { id: "poolside/laguna-xs-2.1", name: "Laguna XS 2.1 (⚡ Fast Agentic)", category: "⚡ Fast & Reliable", badge: "💻 Code" },
 
   // 👁️ VISION & MULTIMODAL (Images & Screenshots)
-  { id: "meta/llama-3.2-11b-vision-instruct", name: "Llama 3.2 11B Vision", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision" },
-  { id: "google/diffusiongemma-26b-a4b-it", name: "DiffusionGemma 26B Vision", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision" },
-  { id: "meta/muse-glimmer-30b", name: "Muse Glimmer 30B (👁️ Vision ~40s)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision" },
-  { id: "nvidia/ising-calibration-1.5-31b", name: "Ising Quantum Calibration VLM", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ VLM" },
-  { id: "meta/llama-3.2-90b-vision-instruct", name: "Llama 3.2 90B Vision (⏳ High Traffic)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision Heavy" },
-  { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", name: "Nemotron Omni Reasoning (⏳ High Traffic)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Omni Vision" },
-  { id: "moonshotai/kimi-k3", name: "Kimi K3 Multimodal (⏳ High Traffic)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision MoE" },
-  { id: "minimaxai/minimax-m3", name: "MiniMax M3 Preview (⏳ Retiring Soon)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision" },
+  { id: "meta/llama-3.2-11b-vision-instruct", name: "Llama 3.2 11B Vision", category: "👁️ Vision & Multimodal", badge: "👁️ Vision" },
+  { id: "google/diffusiongemma-26b-a4b-it", name: "DiffusionGemma 26B Vision", category: "👁️ Vision & Multimodal", badge: "👁️ Vision" },
+  { id: "meta/muse-glimmer-30b", name: "Muse Glimmer 30B", category: "👁️ Vision & Multimodal", badge: "👁️ Vision" },
+  { id: "nvidia/ising-calibration-1.5-31b", name: "Ising Quantum Calibration VLM", category: "👁️ Vision & Multimodal", badge: "👁️ VLM" },
+  { id: "meta/llama-3.2-90b-vision-instruct", name: "Llama 3.2 90B Vision (⏳)", category: "👁️ Vision & Multimodal", badge: "👁️ Vision Heavy" },
+  { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", name: "Nemotron Omni Reasoning (⏳)", category: "👁️ Vision & Multimodal", badge: "👁️ Omni Vision" },
+  { id: "moonshotai/kimi-k3", name: "Kimi K3 Multimodal (⏳)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision MoE" },
+  { id: "minimaxai/minimax-m3", name: "MiniMax M3 Preview (⏳)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision" },
 
   // 💻 CODING & PRO MODELS
   { id: "deepseek-ai/deepseek-v4-pro-0813", name: "DeepSeek V4 Pro (1M Context)", category: "💻 Coding & Pro Models", badge: "💻 Code MoE" },
   { id: "mistralai/mistral-nemotron", name: "Mistral Nemotron Agentic", category: "💻 Coding & Pro Models", badge: "💻 Agentic" },
 
   // 🧠 DEEP THINKERS & HEAVY REASONING (High Load / Cold Start)
-  { id: "google/gemma-4-31b-it", name: "Gemma 4 31B Reasoning (🧠 Heavy)", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Reasoning" },
-  { id: "openai/gpt-oss-120b", name: "GPT-OSS 120B MoE Reasoning (🧠 Heavy)", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Heavy MoE" },
+  { id: "google/gemma-4-31b-it", name: "Gemma 4 31B Reasoning (🧠)", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Reasoning" },
+  { id: "openai/gpt-oss-120b", name: "GPT-OSS 120B MoE Reasoning (🧠)", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Heavy MoE" },
   { id: "nvidia/nemotron-3-super-120b-a12b", name: "Nemotron 3 Super 120B", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Deep Thinker" },
   { id: "nvidia/nemotron-3-ultra-550b-a55b", name: "Nemotron 3 Ultra 550B", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Deep Thinker" },
 
@@ -497,6 +497,18 @@ const ChatWindow = ({ chatId }) => {
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const modelDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target)) {
+        setIsModelDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const pendingImagesRef = useRef([]);
   useEffect(() => {
@@ -650,7 +662,8 @@ const ChatWindow = ({ chatId }) => {
 
   useEffect(() => {
     localStorage.setItem("selectedModelId", selectedModel);
-    if (selectedModel === 'local-gguf') {
+    const isLocal = selectedModel.startsWith('local-') || selectedModel.includes('local');
+    if (isLocal) {
       const checkStatus = async () => {
         try {
           const res = await fetch(`${API_URL}/ollama/status`);
@@ -856,7 +869,7 @@ const ChatWindow = ({ chatId }) => {
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0">
       {/* Header – floating glass command bar */}
-      <div className="relative px-3 lg:px-5 py-3 border-b border-white/8 bg-gradient-to-r from-white/[0.04] via-transparent to-white/[0.02] backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0 rounded-t-[22px]">
+      <div className="relative z-40 px-3 lg:px-5 py-3 border-b border-white/8 bg-gradient-to-r from-white/[0.04] via-transparent to-white/[0.02] backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0 rounded-t-[22px]">
         <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <div className="flex items-center gap-4 min-w-0">
           <div className="hidden lg:flex w-10 h-10 rounded-[12px] bg-cyan-400/15 border border-white/10 items-center justify-center backdrop-blur">
@@ -871,78 +884,122 @@ const ChatWindow = ({ chatId }) => {
                 <Cpu size={11} className="text-cyan-400" />
                 {AI_MODELS.find(m => m.id === selectedModel)?.name || "NVIDIA AI"}
               </p> */}
-              {/* DB cluster HUD — glass */}
-              <div className="flex items-center gap-1.5 rounded-full bg-white/[0.05] border border-white/10 px-2.5 py-1 backdrop-blur">
-                <span className="flex items-center gap-1 mono text-[.5rem] tracking-widest text-white/60"><span className={`w-1.5 h-1.5 rounded-full ${globalDbStatus === 'online' ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : globalDbStatus === 'offline' ? 'bg-red-500' : 'bg-amber-400 animate-pulse'}`} /> GLOBAL</span>
-                <span className="w-px h-3 bg-white/10" />
-                <span className="flex items-center gap-1 mono text-[.5rem] tracking-widest text-white/60"><span className={`w-1.5 h-1.5 rounded-full ${localDbStatus === 'online' ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : localDbStatus === 'offline' ? 'bg-red-500' : 'bg-amber-400 animate-pulse'}`} /> LOCAL</span>
+              {/* DB cluster HUD — single row button toggle with status LED */}
+              <div className="flex items-center gap-1.5 p-1 rounded-full bg-white/[0.04] backdrop-blur border border-white/10 shadow-md">
                 <button
-                  onClick={() => {
-                    if (dbEcosystem === 'global' && localDbStatus === 'online') switchDb('local');
-                    else if (dbEcosystem === 'local' && globalDbStatus === 'online') switchDb('global');
-                  }}
-                  disabled={
-                    (dbEcosystem === 'global' && localDbStatus !== 'online') ||
-                    (dbEcosystem === 'local' && globalDbStatus !== 'online') ||
-                    dbEcosystem === 'checking' || dbEcosystem === 'offline' || dbEcosystem === 'disconnected'
-                  }
-                  className={`mono text-[.5rem] font-bold px-2 py-0.5 rounded-full border ml-1 transition-colors backdrop-blur ${dbEcosystem === 'global'
-                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30 hover:bg-emerald-500/25'
-                    : dbEcosystem === 'local'
-                      ? 'bg-amber-500/15 text-amber-300 border-amber-400/30 hover:bg-amber-500/25'
-                      : 'bg-white/5 text-white/30 border-white/10 cursor-not-allowed'
-                    }`}
+                  onClick={() => switchDb('global')}
+                  disabled={globalDbStatus !== 'online' || dbEcosystem === 'checking'}
+                  className={`mono text-[9.5px] font-bold px-3 py-1 rounded-full transition-all border flex items-center gap-1.5 ${dbEcosystem === 'global'
+                    ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
+                    : 'bg-transparent text-white/50 border-transparent hover:bg-white/[0.06] hover:text-white/80'
+                    } ${globalDbStatus !== 'online' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
-                  {dbEcosystem === 'global' ? '● GLOBAL' : dbEcosystem === 'local' ? '● LOCAL' : '● OFF'}
+                  <span className={`w-1.5 h-1.5 rounded-full ${globalDbStatus === 'online'
+                    ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]'
+                    : globalDbStatus === 'offline'
+                      ? 'bg-red-500'
+                      : 'bg-amber-400 animate-pulse'
+                    }`} />
+                  globalDB
+                </button>
+
+                <button
+                  onClick={() => switchDb('local')}
+                  disabled={localDbStatus !== 'online' || dbEcosystem === 'checking'}
+                  className={`mono text-[9.5px] font-bold px-3 py-1 rounded-full transition-all border flex items-center gap-1.5 ${dbEcosystem === 'local'
+                    ? 'bg-orange-500/25 text-orange-300 border-orange-400/60 shadow-[0_0_12px_rgba(249,115,22,0.35)]'
+                    : 'bg-transparent text-white/50 border-transparent hover:bg-white/[0.06] hover:text-white/80'
+                    } ${localDbStatus !== 'online' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${localDbStatus === 'online'
+                    ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]'
+                    : localDbStatus === 'offline'
+                      ? 'bg-red-500'
+                      : 'bg-amber-400 animate-pulse'
+                    }`} />
+                  localDB
                 </button>
               </div>
-              {selectedModel === 'local-gguf' && (
-                <span className={`flex items-center gap-1 mono text-[9px] tracking-widest px-2.5 py-1 rounded-full border backdrop-blur ${localServerStatus === 'online' ? 'bg-emerald-500/10 border-emerald-400/20 text-emerald-300' : localServerStatus === 'offline' ? 'bg-red-500/10 border-red-400/20 text-red-300' : 'bg-amber-500/10 border-amber-400/20 text-amber-300'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${localServerStatus === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-current'}`} />
-                  LOCAL: {localServerStatus.toUpperCase()}
+
+              {/* Local AI Server Status Badge with Home Icon */}
+              {(selectedModel.startsWith('local-') || selectedModel.includes('local')) && (
+                <span className={`flex items-center gap-1.5 mono text-[9.5px] font-bold tracking-widest px-3 py-1.5 rounded-full border backdrop-blur shadow-md ${localServerStatus === 'online'
+                  ? 'bg-emerald-500/15 border-emerald-400/30 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.25)]'
+                  : localServerStatus === 'offline'
+                    ? 'bg-red-500/15 border-red-400/30 text-red-300'
+                    : 'bg-amber-500/15 border-amber-400/30 text-amber-300'
+                  }`}>
+                  <Home size={11} className={localServerStatus === 'online' ? 'text-emerald-400' : 'text-current'} />
+                  <span>AI: {localServerStatus.toUpperCase()}</span>
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Model Selector HUD — glass */}
+        {/* Custom Model Selector HUD — glass with dark blue hover traveler */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* <div className="hidden lg:flex items-center gap-1.5 mono text-[.5rem] tracking-[0.18em] text-white/35">
-            <Database size={10} /> MODEL CORE
-          </div> */}
-          <div className="relative group">
-            <div className="absolute -inset-px bg-cyan-400/15 rounded-[12px] blur-[8px] opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="relative appearance-none rounded-[12px] bg-white/[0.06] backdrop-blur border border-white/10 text-white py-2 pl-3 pr-9 mono text-[.8rem] tracking-wide focus:outline-none focus:border-cyan-400/30 focus:bg-white/[0.08] cursor-pointer min-w-[240px] max-w-[340px] truncate"
+          <div className="relative" ref={modelDropdownRef}>
+            {/* Trigger Button */}
+            <button
+              onClick={() => setIsModelDropdownOpen((prev) => !prev)}
+              className="relative flex items-center justify-between rounded-[12px] bg-white/[0.06] backdrop-blur border border-white/10 hover:border-cyan-400/40 text-white py-2 pl-3.5 pr-9 mono text-[.8rem] tracking-wide focus:outline-none focus:border-cyan-400/50 cursor-pointer min-w-[250px] max-w-[340px] truncate transition-all shadow-md"
             >
-              {Array.from(new Set(AI_MODELS.map(m => m.category))).map((cat) => (
-                <optgroup key={cat} label={cat} className="bg-[#061824] text-cyan-400 font-bold py-1">
-                  {AI_MODELS.filter(m => m.category === cat).map((model) => (
-                    <option key={model.id} value={model.id} className="bg-[#0a1f2a] text-cyan-100 font-normal">
-                      {model.name} {model.isVision ? '👁️ (Vision)' : ''}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+              <span className="truncate pr-2 font-medium">
+                {AI_MODELS.find((m) => m.id === selectedModel)?.name || "Select Model"}
+              </span>
+              <ChevronDown
+                size={14}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 text-white/50 transition-transform duration-200 ${isModelDropdownOpen ? "rotate-180 text-cyan-400" : ""
+                  }`}
+              />
+            </button>
+
+            {/* Dropdown Menu Popup */}
+            {isModelDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-[320px] max-h-[380px] overflow-y-auto rounded-[14px] bg-[#07131e] border border-cyan-400/50 shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[100] py-1.5 scrollbar-thin divide-y divide-white/5">
+                {Array.from(new Set(AI_MODELS.map((m) => m.category))).map((cat) => (
+                  <div key={cat} className="py-1">
+                    {/* Category Header */}
+                    <div className="px-3.5 py-1.5 mono text-[9.5px] font-extrabold tracking-widest text-cyan-400 uppercase bg-cyan-950/40 flex items-center justify-between">
+                      <span>{cat}</span>
+                    </div>
+
+                    {/* Model Items */}
+                    <div className="space-y-0.5 mt-0.5">
+                      {AI_MODELS.filter((m) => m.category === cat).map((model) => {
+                        const isSelected = model.id === selectedModel;
+                        return (
+                          <button
+                            key={model.id}
+                            onClick={() => {
+                              setSelectedModel(model.id);
+                              setIsModelDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3.5 py-2 mono text-[11.5px] tracking-wide transition-colors flex items-center justify-between group ${isSelected
+                              ? "bg-cyan-500/25 text-cyan-200 font-bold border-l-3 border-cyan-400 shadow-[inset_0_0_12px_rgba(6,182,212,0.15)]"
+                              : "text-slate-300 hover:bg-[#0f2a3f] hover:text-cyan-200"
+                              }`}
+                          >
+                            <span className="truncate pr-2">{model.name}</span>
+                            {isSelected && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)] shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          {AI_MODELS.find(m => m.id === selectedModel)?.isVision && (
-            <span className="hidden sm:flex items-center gap-1 mono text-[9.5px] tracking-wider text-cyan-300 bg-cyan-400/10 border border-cyan-400/25 px-2.5 py-1 rounded-full backdrop-blur">
-              <Eye size={11} className="text-cyan-400" /> VISION READY
-            </span>
-          )}
         </div>
       </div>
 
       {/* Messages Area — responsive */}
       <div className="flex-1 min-h-0 overflow-y-auto p-3 lg:p-4 scrollbar-thin scroll-smooth relative" style={{ transformStyle: 'preserve-3d' }}>
-        {/* subtle grid overlay + floating depth haze */}
-        <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: `linear-gradient(rgba(0,234,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(0,234,255,0.6) 1px, transparent 1px)`, backgroundSize: '40px 40px' }} />
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(600px 300px at 50% 42%, rgba(0,234,255,0.06), transparent 70%)' }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(600px 300px at 50% 42%, rgba(0,234,255,0.04), transparent 70%)' }} />
         <div className="w-full max-w-7xl mx-auto space-y-5 min-h-full flex flex-col relative z-10" style={{ transformStyle: 'preserve-3d' }}>
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-16" style={{ transformStyle: 'preserve-3d' }}>
@@ -1193,7 +1250,7 @@ const ChatWindow = ({ chatId }) => {
                 <div className="h-px flex-1 bg-gradient-to-l from-transparent to-cyan-400/30" />
               </div>
               <p className="mono text-[10px] tracking-[0.12em] text-cyan-100/30 hidden lg:flex items-center gap-1.5">
-                <ShieldCheck size={12} className="text-cyan-400/40" /> Images are processed temporarily for this message and are never saved.
+                <ShieldCheck size={12} className="text-cyan-400/40" /> Images processed temporarily.
               </p>
             </div>
           </div>
