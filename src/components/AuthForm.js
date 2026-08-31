@@ -36,7 +36,8 @@ const AuthForm = () => {
   return (
     <div className="relative min-h-screen flex items-center justify-center py-8 px-4 overflow-hidden bg-[#010a0f]">
       <div className="sci-bg" />
-      <div className="sci-grid" />
+      <div className="sci-stars-far" />
+      <div className="sci-stars-near" />
       <div className="sci-stars" />
       <div className="sci-vignette" />
       <div className="cockpit-top-beam" />
@@ -50,7 +51,7 @@ const AuthForm = () => {
       </div>
       <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[900px] h-[280px] bg-cyan-400/10 blur-[70px] rounded-[100%] pointer-events-none" />
 
-      <div className="relative w-full max-w-[440px]">
+      <div className="relative w-full max-w-[440px] z-20">
         {/* top clearance badge */}
         <div className="flex justify-center mb-4">
           <div className="sci-panel-cut-sm bg-cyan-400/10 border-cyan-400/20 px-3 py-1.5 flex items-center gap-2 mono text-[10px] tracking-[0.22em] text-cyan-300">

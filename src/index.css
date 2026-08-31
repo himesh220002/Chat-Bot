@@ -575,7 +575,7 @@ body {
   /* translucent dark glass skybox window */
   border: 1px solid rgba(0, 234, 255, 0.22);
   border-top-color: rgba(0, 234, 255, 0.35);
-  border-radius: 18px;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
 
   /* Soft glow & shadow */
   box-shadow:

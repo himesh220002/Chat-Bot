@@ -188,7 +188,7 @@ const MermaidDiagram = ({ chart, isStreaming }) => {
           <span>VECTOR NODE</span>
         </span>
       </div>
-      <div className="relative w-full bg-[#061a24] overflow-hidden" style={{ minHeight: '600px', height: '600px', maxHeight: '68vh' }}>
+      <div className="relative w-full bg-[#061a24] overflow-hidden" style={{ minHeight: '200px', height: '600px', maxHeight: '68vh' }}>
         <div className="absolute inset-0 overflow-auto flex items-start justify-center p-2 mermaid-viewport bg-[radial-gradient(ellipse_at_center,rgba(0,234,255,0.04),transparent_70%)]">
           <div
             dangerouslySetInnerHTML={{ __html: svg }}
@@ -225,15 +225,16 @@ const ChartRenderer = ({ configStr }) => {
     const defaultColors = ['#00eaff', '#00ffc6', '#ffb800', '#ff4d6a', '#7b61ff'];
     const activeColors = colors || defaultColors;
     const renderChart = () => {
+      const chartMargin = { top: 15, right: 15, left: -12, bottom: 5 };
       switch (type) {
         case 'bar':
           return (
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart data={data} margin={chartMargin}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,234,255,0.15)" />
-              <XAxis dataKey={xAxisKey} tick={{ fill: '#7dd3e0', fontSize: 11, fontFamily: 'JetBrains Mono' }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} />
-              <YAxis tick={{ fill: '#7dd3e0', fontSize: 11 }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} />
-              <Tooltip contentStyle={{ background: 'rgba(6,30,40,0.92)', border: '1px solid rgba(0,234,255,0.35)', borderRadius: '10px', color: '#e6fdff' }} />
-              <Legend wrapperStyle={{ color: '#a5f3ff' }} />
+              <XAxis dataKey={xAxisKey} tick={{ fill: '#7dd3e0', fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} />
+              <YAxis tick={{ fill: '#7dd3e0', fontSize: 10 }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} width={32} />
+              <Tooltip contentStyle={{ background: 'rgba(6,30,40,0.95)', border: '1px solid rgba(0,234,255,0.4)', borderRadius: '10px', color: '#e6fdff' }} />
+              <Legend wrapperStyle={{ color: '#a5f3ff', fontSize: '11px' }} />
               {dataKeys?.map((key, i) => (
                 <Bar key={key} dataKey={key} fill={activeColors[i % activeColors.length]} radius={[6, 6, 0, 0]} />
               ))}
@@ -241,12 +242,12 @@ const ChartRenderer = ({ configStr }) => {
           );
         case 'line':
           return (
-            <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={data} margin={chartMargin}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,234,255,0.15)" />
-              <XAxis dataKey={xAxisKey} tick={{ fill: '#7dd3e0', fontSize: 11 }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} />
-              <YAxis tick={{ fill: '#7dd3e0', fontSize: 11 }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} />
-              <Tooltip contentStyle={{ background: 'rgba(6,30,40,0.92)', border: '1px solid rgba(0,234,255,0.35)', borderRadius: '10px', color: '#e6fdff' }} />
-              <Legend wrapperStyle={{ color: '#a5f3ff' }} />
+              <XAxis dataKey={xAxisKey} tick={{ fill: '#7dd3e0', fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} />
+              <YAxis tick={{ fill: '#7dd3e0', fontSize: 10 }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} width={32} />
+              <Tooltip contentStyle={{ background: 'rgba(6,30,40,0.95)', border: '1px solid rgba(0,234,255,0.4)', borderRadius: '10px', color: '#e6fdff' }} />
+              <Legend wrapperStyle={{ color: '#a5f3ff', fontSize: '11px' }} />
               {dataKeys?.map((key, i) => (
                 <Line key={key} type="monotone" dataKey={key} stroke={activeColors[i % activeColors.length]} strokeWidth={2.5} dot={{ r: 3, fill: activeColors[i % activeColors.length] }} activeDot={{ r: 5 }} />
               ))}
@@ -254,12 +255,12 @@ const ChartRenderer = ({ configStr }) => {
           );
         case 'area':
           return (
-            <AreaChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <AreaChart data={data} margin={chartMargin}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,234,255,0.15)" />
-              <XAxis dataKey={xAxisKey} tick={{ fill: '#7dd3e0', fontSize: 11 }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} />
-              <YAxis tick={{ fill: '#7dd3e0', fontSize: 11 }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} />
-              <Tooltip contentStyle={{ background: 'rgba(6,30,40,0.92)', border: '1px solid rgba(0,234,255,0.35)', borderRadius: '10px', color: '#e6fdff' }} />
-              <Legend wrapperStyle={{ color: '#a5f3ff' }} />
+              <XAxis dataKey={xAxisKey} tick={{ fill: '#7dd3e0', fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} />
+              <YAxis tick={{ fill: '#7dd3e0', fontSize: 10 }} axisLine={{ stroke: 'rgba(0,234,255,0.2)' }} width={32} />
+              <Tooltip contentStyle={{ background: 'rgba(6,30,40,0.95)', border: '1px solid rgba(0,234,255,0.4)', borderRadius: '10px', color: '#e6fdff' }} />
+              <Legend wrapperStyle={{ color: '#a5f3ff', fontSize: '11px' }} />
               {dataKeys?.map((key, i) => (
                 <Area key={key} type="monotone" dataKey={key} fill={activeColors[i % activeColors.length]} stroke={activeColors[i % activeColors.length]} fillOpacity={0.22} />
               ))}
@@ -268,9 +269,9 @@ const ChartRenderer = ({ configStr }) => {
         case 'pie':
           return (
             <PieChart>
-              <Tooltip contentStyle={{ background: 'rgba(6,30,40,0.92)', border: '1px solid rgba(0,234,255,0.35)', borderRadius: '10px' }} />
-              <Legend wrapperStyle={{ color: '#a5f3ff' }} />
-              <Pie data={data} dataKey={dataKeys?.[0]} nameKey={xAxisKey} cx="50%" cy="50%" outerRadius={110} label={{ fill: '#e6fdff', fontSize: 12 }}>
+              <Tooltip contentStyle={{ background: 'rgba(6,30,40,0.95)', border: '1px solid rgba(0,234,255,0.4)', borderRadius: '10px' }} />
+              <Legend wrapperStyle={{ color: '#a5f3ff', fontSize: '11px' }} />
+              <Pie data={data} dataKey={dataKeys?.[0]} nameKey={xAxisKey} cx="50%" cy="50%" outerRadius={100} label={{ fill: '#e6fdff', fontSize: 11 }}>
                 {data?.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={activeColors[index % activeColors.length]} />
                 ))}
@@ -279,12 +280,12 @@ const ChartRenderer = ({ configStr }) => {
           );
         case 'scatter':
           return (
-            <ScatterChart margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <ScatterChart margin={chartMargin}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,234,255,0.15)" />
-              <XAxis dataKey={xAxisKey} type="number" name={xAxisKey} tick={{ fill: '#7dd3e0' }} />
-              <YAxis dataKey={dataKeys?.[0]} type="number" name={dataKeys?.[0]} tick={{ fill: '#7dd3e0' }} />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ background: 'rgba(6,30,40,0.92)', border: '1px solid rgba(0,234,255,0.35)', borderRadius: '10px' }} />
-              <Legend wrapperStyle={{ color: '#a5f3ff' }} />
+              <XAxis dataKey={xAxisKey} type="number" name={xAxisKey} tick={{ fill: '#7dd3e0', fontSize: 10 }} />
+              <YAxis dataKey={dataKeys?.[0]} type="number" name={dataKeys?.[0]} tick={{ fill: '#7dd3e0', fontSize: 10 }} width={32} />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ background: 'rgba(6,30,40,0.95)', border: '1px solid rgba(0,234,255,0.4)', borderRadius: '10px' }} />
+              <Legend wrapperStyle={{ color: '#a5f3ff', fontSize: '11px' }} />
               <Scatter name={dataKeys?.[0]} data={data} fill={activeColors[0]} />
             </ScatterChart>
           );
@@ -293,13 +294,15 @@ const ChartRenderer = ({ configStr }) => {
       }
     };
     return (
-      <div className="w-full my-6 sci-panel sci-panel-cut-sm border-cyan-400/20 bg-[rgba(8,30,40,0.75)] p-5 overflow-auto">
+      <div className="w-full my-5 sci-panel sci-panel-cut-sm border-cyan-400/20 bg-[rgba(8,30,40,0.85)] p-2 sm:p-5 overflow-hidden relative">
         <span className="corners"><i /><i /><i /><i /></span>
-        {title && <h3 className="display text-sm tracking-[0.18em] text-center text-cyan-200 mb-4">{title.toUpperCase()}</h3>}
-        <div className="h-[360px] w-full min-w-[420px]">
-          <ResponsiveContainer width="100%" height="100%">
-            {renderChart()}
-          </ResponsiveContainer>
+        {title && <h3 className="display text-xs sm:text-sm tracking-[0.18em] text-center text-cyan-200 mb-2 mt-1">{title.toUpperCase()}</h3>}
+        <div className="w-full overflow-x-auto scrollbar-thin pl-1 pr-2 py-1 relative z-10">
+          <div className="h-[340px] w-full min-w-[320px] sm:min-w-[420px]">
+            <ResponsiveContainer width="100%" height="100%">
+              {renderChart()}
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     );
@@ -868,11 +871,11 @@ const ChatWindow = ({ chatId }) => {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0">
-      {/* Header – floating glass command bar */}
-      <div className="relative z-40 px-3 lg:px-5 py-3 border-b border-white/8 bg-gradient-to-r from-white/[0.04] via-transparent to-white/[0.02] backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0 rounded-t-[22px]">
+      {/* Header – floating glass command bar with sharp 45° chamfer top cut */}
+      <div className="relative z-40 px-3 lg:px-5 py-3 border-b border-white/8 bg-gradient-to-r from-white/[0.04] via-transparent to-white/[0.02] backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0" style={{ clipPath: 'polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%, 0 14px)' }}>
         <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <div className="flex items-center gap-4 min-w-0">
-          <div className="hidden lg:flex w-10 h-10 rounded-[12px] bg-cyan-400/15 border border-white/10 items-center justify-center backdrop-blur">
+          <div className="hidden lg:flex w-10 h-10 sci-panel-cut-sm bg-cyan-400/15 border border-white/10 items-center justify-center backdrop-blur">
             <Crosshair size={16} className="text-cyan-300" />
           </div>
           <div className="min-w-0">
@@ -880,16 +883,12 @@ const ChatWindow = ({ chatId }) => {
               <span className="text-cyan-400">&gt;_</span> INPUTCHAT <span className="hidden sm:inline mono text-[9px] tracking-[0.2em] text-cyan-300/60 border border-cyan-400/20 px-1.5 py-0.5 sci-panel-cut-sm bg-cyan-400/10">COCKPIT LINK</span>
             </h3> */}
             <div className="flex flex-wrap items-center gap-2 mt-1">
-              {/* <p className="mono text-[11px] text-cyan-100/60 flex items-center gap-1.5">
-                <Cpu size={11} className="text-cyan-400" />
-                {AI_MODELS.find(m => m.id === selectedModel)?.name || "NVIDIA AI"}
-              </p> */}
               {/* DB cluster HUD — single row button toggle with status LED */}
-              <div className="flex items-center gap-1.5 p-1 rounded-full bg-white/[0.04] backdrop-blur border border-white/10 shadow-md">
+              <div className="flex items-center gap-1.5 p-1 sci-panel-cut-sm bg-white/[0.04] backdrop-blur border border-white/10 shadow-md">
                 <button
                   onClick={() => switchDb('global')}
                   disabled={globalDbStatus !== 'online' || dbEcosystem === 'checking'}
-                  className={`mono text-[9.5px] font-bold px-3 py-1 rounded-full transition-all border flex items-center gap-1.5 ${dbEcosystem === 'global'
+                  className={`mono text-[9.5px] font-bold px-3 py-1 sci-panel-cut-sm transition-all border flex items-center gap-1.5 ${dbEcosystem === 'global'
                     ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
                     : 'bg-transparent text-white/50 border-transparent hover:bg-white/[0.06] hover:text-white/80'
                     } ${globalDbStatus !== 'online' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
@@ -906,7 +905,7 @@ const ChatWindow = ({ chatId }) => {
                 <button
                   onClick={() => switchDb('local')}
                   disabled={localDbStatus !== 'online' || dbEcosystem === 'checking'}
-                  className={`mono text-[9.5px] font-bold px-3 py-1 rounded-full transition-all border flex items-center gap-1.5 ${dbEcosystem === 'local'
+                  className={`mono text-[9.5px] font-bold px-3 py-1 sci-panel-cut-sm transition-all border flex items-center gap-1.5 ${dbEcosystem === 'local'
                     ? 'bg-orange-500/25 text-orange-300 border-orange-400/60 shadow-[0_0_12px_rgba(249,115,22,0.35)]'
                     : 'bg-transparent text-white/50 border-transparent hover:bg-white/[0.06] hover:text-white/80'
                     } ${localDbStatus !== 'online' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
@@ -923,7 +922,7 @@ const ChatWindow = ({ chatId }) => {
 
               {/* Local AI Server Status Badge with Home Icon */}
               {(selectedModel.startsWith('local-') || selectedModel.includes('local')) && (
-                <span className={`flex items-center gap-1.5 mono text-[9.5px] font-bold tracking-widest px-3 py-1.5 rounded-full border backdrop-blur shadow-md ${localServerStatus === 'online'
+                <span className={`flex items-center gap-1.5 mono text-[9.5px] font-bold tracking-widest px-3 py-1.5 sci-panel-cut-sm border backdrop-blur shadow-md ${localServerStatus === 'online'
                   ? 'bg-emerald-500/15 border-emerald-400/30 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.25)]'
                   : localServerStatus === 'offline'
                     ? 'bg-red-500/15 border-red-400/30 text-red-300'
@@ -937,13 +936,13 @@ const ChatWindow = ({ chatId }) => {
           </div>
         </div>
 
-        {/* Custom Model Selector HUD — glass with dark blue hover traveler */}
+        {/* Custom Model Selector HUD — glass with 45° sharp chamfer cut */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="relative" ref={modelDropdownRef}>
             {/* Trigger Button */}
             <button
               onClick={() => setIsModelDropdownOpen((prev) => !prev)}
-              className="relative flex items-center justify-between rounded-[12px] bg-white/[0.06] backdrop-blur border border-white/10 hover:border-cyan-400/40 text-white py-2 pl-3.5 pr-9 mono text-[.8rem] tracking-wide focus:outline-none focus:border-cyan-400/50 cursor-pointer min-w-[250px] max-w-[340px] truncate transition-all shadow-md"
+              className="relative flex items-center justify-between sci-panel-cut-sm bg-white/[0.06] backdrop-blur border border-white/10 hover:border-cyan-400/40 text-white py-2 pl-3.5 pr-9 mono text-[.8rem] tracking-wide focus:outline-none focus:border-cyan-400/50 cursor-pointer min-w-[250px] max-w-[340px] truncate transition-all shadow-md"
             >
               <span className="truncate pr-2 font-medium">
                 {AI_MODELS.find((m) => m.id === selectedModel)?.name || "Select Model"}
@@ -955,9 +954,9 @@ const ChatWindow = ({ chatId }) => {
               />
             </button>
 
-            {/* Dropdown Menu Popup */}
+            {/* Dropdown Menu Popup with 45° sharp chamfer cut */}
             {isModelDropdownOpen && (
-              <div className="absolute lg:right-0 mt-2 w-[320px] max-h-[380px] overflow-y-auto rounded-[14px] bg-[#07131e] border border-cyan-400/50 shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[100] py-1.5 scrollbar-thin divide-y divide-white/5">
+              <div className="absolute lg:right-0 mt-2 w-[320px] max-h-[380px] overflow-y-auto sci-panel-cut-sm bg-[#07131e] border border-cyan-400/50 shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[100] py-1.5 scrollbar-thin divide-y divide-white/5">
                 {Array.from(new Set(AI_MODELS.map((m) => m.category))).map((cat) => (
                   <div key={cat} className="py-1">
                     {/* Category Header */}
@@ -1187,13 +1186,13 @@ const ChatWindow = ({ chatId }) => {
                   onPaste={handlePaste}
                 />
 
-                {/* action cluster */}
+                {/* action cluster with sharp 45° chamfer cut buttons */}
                 <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={sending || pendingImages.length >= 2}
-                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-cyan-300 flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-40"
+                    className="w-8 h-8 lg:w-10 lg:h-10 sci-panel-cut-sm bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-cyan-300 flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-40"
                     title={pendingImages.length >= 2 ? "Maximum 2 images attached" : "Attach temporary image (max 2 images, 5MB each)"}
                   >
                     <Paperclip size={16} />
@@ -1203,7 +1202,7 @@ const ChatWindow = ({ chatId }) => {
                     <button
                       type="button"
                       onClick={() => abortControllerRef.current?.abort()}
-                      className="rounded-[12px] bg-red-500/15 border border-red-400/30 text-red-300 hover:bg-red-500/25 px-3 py-2 mono text-[11px] tracking-widest font-bold flex items-center gap-1.5 transition-colors backdrop-blur"
+                      className="sci-panel-cut-sm bg-red-500/15 border border-red-400/30 text-red-300 hover:bg-red-500/25 px-3 py-2 mono text-[11px] tracking-widest font-bold flex items-center gap-1.5 transition-colors backdrop-blur"
                     >
                       <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" /> ABORT
                     </button>
@@ -1211,7 +1210,7 @@ const ChatWindow = ({ chatId }) => {
                     <button
                       type="submit"
                       disabled={(!newMessage.trim() && pendingImages.length === 0) || sending}
-                      className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] bg-cyan-400 text-black hover:bg-cyan-300 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 border border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)] flex items-center justify-center transition-all hover:scale-[1.03] active:scale-95"
+                      className="w-8 h-8 lg:w-10 lg:h-10 sci-panel-cut-sm bg-cyan-400 text-black hover:bg-cyan-300 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 border border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)] flex items-center justify-center transition-all hover:scale-[1.03] active:scale-95"
                     >
                       <Send size={16} className="ml-0.5" />
                     </button>
