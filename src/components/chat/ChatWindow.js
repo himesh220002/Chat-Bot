@@ -719,6 +719,8 @@ const ChatWindow = ({ chatId }) => {
     };
     setMessages((prev) => [...prev, optimisticUserMsg]);
     let currentStreamText = '';
+    const responseStartTime = Date.now();
+    let isAbortedOrErrored = false;
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/chats/${chatId}/messages`, {
@@ -763,11 +765,17 @@ const ChatWindow = ({ chatId }) => {
                 } else if (data.type === 'chunk') {
                   currentStreamText += data.text;
                   setStreamingMessage(currentStreamText);
-                } else if (data.type === 'done' || data.type === 'error') {
+                } else if (data.type === 'done') {
+                  setMessages((prev) => [...prev, data.botMessage]);
+                  setStreamingMessage("");
+                  currentStreamText = '';
+                } else if (data.type === 'error') {
+                  isAbortedOrErrored = true;
                   setMessages((prev) => [...prev, data.botMessage]);
                   setStreamingMessage("");
                   currentStreamText = '';
                 } else if (data.type === 'error_fatal') {
+                  isAbortedOrErrored = true;
                   setMessages((prev) => [...prev, {
                     _id: Date.now().toString(),
                     message: "⚠️ **Fatal Error**\n\nSomething went wrong while generating the response. This may be due to the context limit being reached or an API error. Please start a new chat.",
@@ -785,6 +793,7 @@ const ChatWindow = ({ chatId }) => {
         }
       }
     } catch (err) {
+      isAbortedOrErrored = true;
       if (err.name === 'AbortError') {
         const abortedText = currentStreamText ? currentStreamText + "\n\n*(aborted)*" : "*(aborted)*";
         fetch(`${API_URL}/chats/${chatId}/messages/append`, {
@@ -816,6 +825,12 @@ const ChatWindow = ({ chatId }) => {
         }]);
       }
     } finally {
+      if (!isAbortedOrErrored) {
+        const elapsedSec = Math.max(1, Math.round((Date.now() - responseStartTime) / 1000));
+        window.dispatchEvent(new CustomEvent("model_probe_update", {
+          detail: { modelId: selectedModel, elapsedSec }
+        }));
+      }
       setSending(false);
       setStreamingMessage("");
     }

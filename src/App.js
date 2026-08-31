@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import AuthForm from './components/AuthForm';
 import ChatList from './components/chat/ChatList';
 import ChatWindow from './components/chat/ChatWindow';
+import ModelIntelDashboard from './components/chat/ModelIntelDashboard';
 import { Menu, X, Zap, Activity, Crosshair, Radio, Box, Camera, KeyRound, ShieldCheck, Gauge, ChevronRight } from "lucide-react";
 
 function App() {
@@ -257,119 +258,12 @@ function App() {
               </div>
             </main>
 
-            {/* Right screen — Valorant UI, attached to right side wall */}
-            <aside className="hidden xl:flex shrink-0 flex-col gap-3 triple-right">
-              <div className="relative flex flex-col gap-3 h-full">
+            {/* Right screen — Model Intel TOP-3 Live Telemetry Dashboard */}
+            <aside className="hidden xl:flex shrink-0 flex-col w-[320px] triple-right">
+              <div className="relative flex flex-col h-full">
                 <div className="hidden xl:block float-shadow" />
-                <div className="valorant-panel flex-1 flex flex-col overflow-hidden p-4 overflow-y-auto scrollbar-thin">
-                  {/* Header — Valorant */}
-                  <div className="flex items-center justify-between border-b border-[#ff4655]/15 pb-3 shrink-0">
-                    <span className="valorant-label text-[11px] tracking-[0.14em] valorant-beige">DASHBOARD</span>
-                    <span className="valorant-label text-[9px] tracking-widest text-[#ece8e1] px-2 py-1 bg-[#ff4655]">15:01 PM</span>
-                  </div>
-
-                  {/* LLM Cognition — Valorant */}
-                  <div className="mt-3 bg-[#0a0e13] border border-[#ff4655]/12 p-3 shrink-0" style={{ clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px), calc(100% - 6px) 100%,0 100%,0 6px)' }}>
-                    <div className="valorant-label text-[9px] tracking-[0.12em] text-[#ff4655]">HOW IT THINKS • GENERATION LEVELS</div>
-                    <p className="valorant-label text-[8px] leading-[1.45] text-[#ece8e1]/60 mt-1.5">Pre-train → SFT → RLHF • Chain-of-Thought → Tree-of-Thought → Self-Reflect. <span className="text-[#ece8e1]">L1 Draft</span> fast, <span className="text-[#ff4655]">L2 Refine</span> balanced, <span className="text-[#ece8e1]">L3 Verify</span> slow & accurate.</p>
-                    <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-                      <div className="bg-[#1a242e] border border-white/5 p-1.5 text-center" style={{ clipPath: 'polygon(3px 0,100% 0,100% calc(100% - 3px), calc(100% - 3px) 100%,0 100%,0 3px)' }}>
-                        <div className="valorant-label text-[7px] text-white/30 tracking-widest">SPEED</div>
-                        <div className="valorant-header text-[11px] text-[#ece8e1] leading-none mt-0.5">42 tok/s</div>
-                        <div className="valorant-label text-[6px] text-[#ff4655]">~240ms</div>
-                      </div>
-                      <div className="bg-[#1a242e] border border-white/5 p-1.5 text-center" style={{ clipPath: 'polygon(3px 0,100% 0,100% calc(100% - 3px), calc(100% - 3px) 100%,0 100%,0 3px)' }}>
-                        <div className="valorant-label text-[7px] text-white/30 tracking-widest">LEVEL</div>
-                        <div className="valorant-header text-[11px] text-[#ff4655] leading-none mt-0.5">L2</div>
-                        <div className="valorant-label text-[6px] text-white/30">Refine</div>
-                      </div>
-                      <div className="bg-[#1a242e] border border-white/5 p-1.5 text-center" style={{ clipPath: 'polygon(3px 0,100% 0,100% calc(100% - 3px), calc(100% - 3px) 100%,0 100%,0 3px)' }}>
-                        <div className="valorant-label text-[7px] text-white/30 tracking-widest">CONTEXT</div>
-                        <div className="valorant-header text-[11px] text-[#ece8e1] leading-none mt-0.5">4K</div>
-                        <div className="valorant-label text-[6px] text-white/30">4096</div>
-                      </div>
-                    </div>
-                    <div className="mt-2.5">
-                      <div className="flex justify-between valorant-label text-[7px] tracking-widest text-white/25"><span>L1 Draft</span><span>L2 Refine</span><span>L3 Verify</span></div>
-                      <div className="mt-1 h-1.5 bg-[#1a242e] border border-white/5 flex overflow-hidden" style={{ clipPath: 'polygon(2px 0,100% 0,100% 100%,0 100%,0 2px)' }}>
-                        <div className="bg-[#ff4655]" style={{ width: '28%' }} />
-                        <div className="bg-[#ff4655]/60" style={{ width: '42%' }} />
-                        <div className="bg-white/10" style={{ width: '30%' }} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Speedometer — Valorant red/beige */}
-                  <div className="mt-4 relative">
-                    <div className="flex items-end justify-between valorant-label text-[9px] tracking-widest text-[#ece8e1]/55">
-                      <span>SPEEDOMETER v0.1</span>
-                      <span className="text-[#ff4655]">193 km/h</span>
-                    </div>
-                    <div className="mt-2 relative bg-[#0a0e13] border border-[#ff4655]/20 overflow-hidden p-3" style={{ clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px), calc(100% - 6px) 100%,0 100%,0 6px)' }}>
-                      <div className="absolute inset-0 bg-gradient-to-br from-[#ff4655]/8 via-transparent to-transparent" />
-                      {/* circular gauge */}
-                      <div className="relative flex items-center gap-3 h-full">
-                        <div className="w-20 h-20 rounded-full border border-[#ff4655]/30 bg-[#1a242e] flex items-center justify-center relative overflow-hidden">
-                          <div className="absolute inset-1 rounded-full border border-dashed border-[#ff4655]/20 animate-spin" style={{ animationDuration: '12s' }} />
-                          <div className="text-center">
-                            <div className="valorant-header text-lg font-bold text-[#ece8e1] leading-none">193</div>
-                            <div className="valorant-label text-[7px] tracking-[0.18em] text-[#ff4655]/80">km/h</div>
-                          </div>
-                          <div className="absolute bottom-1 w-12 h-1 bg-[#ff4655] rounded-full shadow-[0_0_8px_rgba(255,70,85,0.6)]" />
-                        </div>
-                        <div className="flex-1 space-y-2">
-                          <div>
-                            <div className="flex justify-between valorant-label text-[8px] tracking-widest text-[#ece8e1]/50"><span>min</span><span>BOOST</span><span>max</span></div>
-                            <div className="h-1.5 bg-[#1a242e] border border-white/10 overflow-hidden mt-1" style={{ clipPath: 'polygon(3px 0,100% 0,100% calc(100% - 3px), calc(100% - 3px) 100%,0 100%,0 3px)' }}>
-                              <div className="h-full w-[68%] bg-[#ff4655] shadow-[0_0_8px_rgba(255,70,85,0.5)]" />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 valorant-label text-[9px]">
-                            <div className="bg-[#1a242e] border border-white/10 px-2 py-1.5" style={{ clipPath: 'polygon(4px 0,100% 0,100% calc(100% - 4px), calc(100% - 4px) 100%,0 100%,0 4px)' }}><div className="text-[#ece8e1]/50 text-[8px] tracking-widest">k-W</div><div className="text-[#ece8e1] font-semibold">50</div></div>
-                            <div className="bg-[#1a242e] border border-white/10 px-2 py-1.5" style={{ clipPath: 'polygon(4px 0,100% 0,100% calc(100% - 4px), calc(100% - 4px) 100%,0 100%,0 4px)' }}><div className="text-[#ece8e1]/50 text-[8px] tracking-widest">Nm</div><div className="text-[#ff4655] font-semibold">792</div></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bar graph — Valorant red/beige */}
-                  <div className="mt-4">
-                    <div className="valorant-label text-[9px] tracking-[0.18em] text-[#ece8e1]/50">PWR CURVE • LAST 24H</div>
-                    <div className="mt-2 h-20 flex items-end gap-[2px]">
-                      {[22, 38, 28, 44, 18, 52, 34, 60, 26, 48, 30, 62, 42, 36, 50, 24, 46, 58, 20].map((h, i) => (
-                        <span key={i} className="flex-1" style={{ height: `${h}%`, background: i % 3 === 0 ? '#ff4655' : i % 2 === 0 ? 'rgba(236,232,225,0.18)' : '#ff6b7a', opacity: 0.92, clipPath: 'polygon(2px 0,100% 0,100% 100%,0 100%,0 2px)' }} />
-                      ))}
-                    </div>
-                    <div className="mt-2 h-[2px] bg-[#ff4655]/30" />
-                  </div>
-
-                  {/* Wave + PSI — Valorant */}
-                  <div className="mt-4 space-y-3">
-                    <div className="h-14 bg-[#0a0e13] border border-white/10 relative overflow-hidden p-2" style={{ clipPath: 'polygon(5px 0,100% 0,100% calc(100% - 5px), calc(100% - 5px) 100%,0 100%,0 5px)' }}>
-                      <svg viewBox="0 0 260 56" className="w-full h-full" preserveAspectRatio="none">
-                        <path d="M0 28 C 20 8, 40 48, 60 28 S 100 12, 120 28 S 160 44, 180 28 S 220 6, 260 28" fill="none" stroke="#ff4655" strokeWidth="1.8" />
-                        <path d="M0 28 C 20 8, 40 48, 60 28 S 100 12, 120 28 S 160 44, 180 28 S 220 6, 260 28" fill="none" stroke="#ece8e1" strokeWidth="1" opacity="0.35" style={{ transform: 'translateY(2px)' }} />
-                        <circle cx="180" cy="28" r="3" fill="#ff4655" stroke="#ece8e1" strokeWidth="1" />
-                      </svg>
-                      <div className="absolute top-1 right-2 valorant-label text-[8px] tracking-widest text-[#ece8e1]/50">21:00</div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { v: '40', label: 'PSI', sub: 'front left' },
-                        { v: '41', label: 'PSI', sub: 'front right' },
-                        { v: '39', label: 'PSI', sub: 'rear left' },
-                      ].map((it) => (
-                        <div key={it.sub} className="bg-[#1a242e] border border-white/10 p-2 text-center" style={{ clipPath: 'polygon(5px 0,100% 0,100% calc(100% - 5px), calc(100% - 5px) 100%,0 100%,0 5px)' }}>
-                          <div className="w-8 h-8 mx-auto bg-[#ff4655] text-[#ece8e1] flex items-center justify-center valorant-header text-[11px] font-bold" style={{ clipPath: 'polygon(4px 0,100% 0,100% calc(100% - 4px), calc(100% - 4px) 100%,0 100%,0 4px)' }}>{it.v}</div>
-                          <div className="valorant-label text-[8px] tracking-widest text-[#ece8e1]/60 mt-1">{it.label}</div>
-                          <div className="valorant-label text-[7px] tracking-wide text-white/30">{it.sub}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-
+                <div className="valorant-panel flex-1 flex flex-col overflow-hidden">
+                  <ModelIntelDashboard />
                 </div>
               </div>
             </aside>
