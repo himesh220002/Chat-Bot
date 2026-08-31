@@ -325,14 +325,15 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
     // Call AI Model
     let completion;
     try {
-      if (model === 'local-gguf') {
-        console.log(`[DEBUG] Routing to local LM Studio for model: ${model}`);
+      if (model.startsWith('local-')) {
+        const ollamaModel = model.includes('llava') ? "llava:7b" : "qwen2.5-coder:7b";
+        console.log(`[DEBUG] Routing to local Ollama for model: ${ollamaModel}`);
         const localOpenAI = new OpenAI({
           apiKey: 'ollama',
           baseURL: 'http://localhost:11434/v1' // Ollama default port
         });
         completion = await localOpenAI.chat.completions.create({
-          model: "qwen2.5-coder:7b", // Ollama requires the exact model name including the tag
+          model: ollamaModel,
           messages: messagesForAI,
           stream: true,
         });

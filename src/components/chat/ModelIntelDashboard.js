@@ -26,8 +26,8 @@ const INITIAL_PROBES = {
   "google/gemma-4-31b-it": { name: "Gemma 4 31B", speedSec: 50, score: 85, category: "DEEP" },
 
   // LOCAL
-  "qwen2.5-coder:7b": { name: "Qwen Coder 2.5 7B", speedSec: 8, score: 75, category: "LOCAL" },
-  "local-gguf": { name: "Local (LM Studio)", speedSec: 12, score: 70, category: "LOCAL" },
+  "local-llava": { name: "Local LLaVA 7B (Vis)", speedSec: 6, score: 78, category: "LOCAL" },
+  "local-gguf": { name: "Qwen Coder 2.5 7B", speedSec: 8, score: 75, category: "LOCAL" },
   "ollama-fallback": { name: "Ollama fallback", speedSec: 15, score: 68, category: "LOCAL" }
 };
 
@@ -73,11 +73,12 @@ export default function ModelIntelDashboard() {
         });
 
         if (!found) {
+          const isLocal = modelId.startsWith("local-");
           next[modelId] = {
             name: modelId.split("/").pop().replace("-instruct", "").slice(0, 18),
             speedSec: elapsedSec,
             score: 80,
-            category: "FAST"
+            category: isLocal ? "LOCAL" : "FAST"
           };
         }
 

@@ -67,7 +67,8 @@ const AI_MODELS = [
   { id: "nvidia/nemotron-3-ultra-550b-a55b", name: "Nemotron 3 Ultra 550B", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Deep Thinker" },
 
   // 🏠 LOCAL INTEGRATION
-  { id: "local-gguf", name: "Local Model (LM Studio/Ollama)", category: "🏠 Local Integration", badge: "🏠 Local" }
+  { id: "local-llava", name: "Local LLaVA 7B (Vision)", category: "🏠 Local Integration", isVision: true, badge: "🏠 Local Vision" },
+  { id: "local-gguf", name: "Local Qwen Coder 2.5 7B", category: "🏠 Local Integration", badge: "🏠 Local Code" }
 ];
 
 mermaid.initialize({
