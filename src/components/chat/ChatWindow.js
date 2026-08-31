@@ -883,7 +883,7 @@ const ChatWindow = ({ chatId }) => {
             {/* <h3 className="display font-bold text-white tracking-[0.12em] text-sm flex items-center gap-2">
               <span className="text-cyan-400">&gt;_</span> INPUTCHAT <span className="hidden sm:inline mono text-[9px] tracking-[0.2em] text-cyan-300/60 border border-cyan-400/20 px-1.5 py-0.5 sci-panel-cut-sm bg-cyan-400/10">COCKPIT LINK</span>
             </h3> */}
-            <div className="flex flex-wrap items-center gap-2 mt-1">
+            <div className="hidden lg:flex flex-wrap items-center gap-2 mt-1">
               {/* DB cluster HUD — single row button toggle with status LED */}
               <div className="flex items-center gap-1.5 p-1 rounded-full bg-white/[0.04] backdrop-blur border border-white/10 shadow-md">
                 <button
