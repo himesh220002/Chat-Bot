@@ -32,7 +32,8 @@ app.use(cors({
   }
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 let activeDbEcosystem = 'disconnected';
 let dbStatuses = { global: 'checking', local: 'checking' };
@@ -210,16 +211,22 @@ app.get('/api/chats/:id/messages', authenticateToken, async (req, res) => {
 
 app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
   try {
-    const { content, model } = req.body;
+    const { content, model, image, imageMeta, images, imageMetas } = req.body;
     const chatId = req.params.id;
-    console.log(`[DEBUG] Received chat request for model: ${model}`);
 
-    // Save user message
+    // Normalize image payloads (supports single image or array up to 2)
+    const imageList = Array.isArray(images) ? images : (image ? [image] : []);
+    const metaList = Array.isArray(imageMetas) ? imageMetas : (imageMeta ? [imageMeta] : []);
+
+    console.log(`[DEBUG] Received chat request for model: ${model}${imageList.length > 0 ? ` (with ${imageList.length} temp image(s))` : ''}`);
+
+    // Save user message (ONLY store metadata, NEVER image binaries or base64)
     const userMessage = new Message({
       chat_id: chatId,
       user_id: req.user.userId,
       message: content,
-      role: 'user'
+      role: 'user',
+      ...(metaList.length > 0 ? { imageMetas: metaList, imageMeta: metaList[0] } : {})
     });
     await userMessage.save();
 
@@ -237,7 +244,7 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
             model: "qwen2.5-coder:7b",
             messages: [
               { role: "system", content: "Generate a short, descriptive title for a chat (max 5 words). Do not use quotes." },
-              { role: "user", content: content },
+              { role: "user", content: content || "Image input" },
             ],
           });
         } else {
@@ -245,7 +252,7 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
             model: "meta/llama-3.2-11b-vision-instruct",
             messages: [
               { role: "system", content: "Generate a short, descriptive title for a chat (max 5 words). Do not use quotes." },
-              { role: "user", content: content },
+              { role: "user", content: content || "Image analysis request" },
             ],
           });
         }
@@ -294,10 +301,25 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
   "colors": ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088fe"]
 }`
       },
-      ...recentMessages.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.message
-      }))
+      ...recentMessages.map((msg, idx) => {
+        const isCurrentMsg = idx === recentMessages.length - 1 && msg.role === 'user';
+        if (isCurrentMsg && imageList.length > 0) {
+          return {
+            role: 'user',
+            content: [
+              { type: 'text', text: msg.message || 'Analyze the attached image(s).' },
+              ...imageList.map(imgData => ({
+                type: 'image_url',
+                image_url: { url: imgData }
+              }))
+            ]
+          };
+        }
+        return {
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.message
+        };
+      })
     ];
 
     // Call AI Model
@@ -323,14 +345,6 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
           messages: messagesForAI,
           stream: true,
         };
-
-        if (targetModel.includes('deepseek')) {
-          reqOptions.extra_body = {
-            chat_template_kwargs: {
-              thinking: false
-            }
-          };
-        }
 
         completion = await openai.chat.completions.create(reqOptions);
       }
@@ -369,12 +383,23 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
       res.end();
 
     } catch (apiError) {
-      if (apiError.status === 404) {
-        console.error(`[DEBUG] Model ${model} is currently unavailable on NVIDIA API (404)`);
+      if (apiError.status === 404 || apiError.status === 410) {
+        console.error(`[DEBUG] Model ${model} is currently unavailable or deprecated (status: ${apiError.status})`);
         const botMessage = new Message({
           chat_id: chatId,
           user_id: req.user.userId,
-          message: `⚠️ **Model Unavailable**\n\nThe AI model \`${model}\` is currently offline or unavailable on the NVIDIA API servers. Please try selecting a different model from the dropdown.`,
+          message: `⚠️ **Model Unavailable / Retired**\n\nThe AI model \`${model}\` is currently offline or retired on the API provider servers. Please select a different model from the dropdown.`,
+          role: 'assistant'
+        });
+        await botMessage.save();
+        res.write(`data: ${JSON.stringify({ type: 'error', botMessage })}\n\n`);
+        res.end();
+      } else if (apiError.status === 429 || (apiError.message && (apiError.message.includes('ResourceExhausted') || apiError.message.includes('limit reached')))) {
+        console.warn(`[WARNING] Model ${model} hit rate/concurrency limit:`, apiError.message || apiError);
+        const botMessage = new Message({
+          chat_id: chatId,
+          user_id: req.user.userId,
+          message: `⚠️ **Capacity / Traffic Limit Reached**\n\nThe servers for \`${model}\` are temporarily busy (worker request limit reached). Please wait a few seconds and try again, or switch to a different model.`,
           role: 'assistant'
         });
         await botMessage.save();
@@ -385,6 +410,17 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
           chat_id: chatId,
           user_id: req.user.userId,
           message: `⚠️ **Local Server Not Running**\n\nCould not connect to Ollama on \`http://localhost:11434\`. Please make sure Ollama is running and your model is loaded.`,
+          role: 'assistant'
+        });
+        await botMessage.save();
+        res.write(`data: ${JSON.stringify({ type: 'error', botMessage })}\n\n`);
+        res.end();
+      } else if (apiError.status === 400 || (apiError.message && (apiError.message.includes('multimodal') || apiError.message.includes('Multimodal') || apiError.message.includes('vision')))) {
+        console.warn(`[WARNING] Model ${model} rejected multimodal/image input:`, apiError.message || apiError);
+        const botMessage = new Message({
+          chat_id: chatId,
+          user_id: req.user.userId,
+          message: `⚠️ **Model Does Not Support Images**\n\nThe selected model (\`${model}\`) rejected the image payload because its runtime engine is text-only. Please switch to a vision-enabled model (like \`meta/llama-3.2-11b-vision-instruct\` or \`google/diffusiongemma-26b-a4b-it\`).`,
           role: 'assistant'
         });
         await botMessage.save();

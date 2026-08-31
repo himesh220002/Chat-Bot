@@ -20,6 +20,22 @@ const messageSchema = new mongoose.Schema({
     enum: ['user', 'assistant'],
     required: true,
   },
+  imageMetas: [{
+    imageId: { type: String },
+    originalName: { type: String },
+    mimeType: { type: String },
+    width: { type: Number },
+    height: { type: Number },
+    sizeBytes: { type: Number }
+  }],
+  imageMeta: {
+    imageId: { type: String },
+    originalName: { type: String },
+    mimeType: { type: String },
+    width: { type: Number },
+    height: { type: Number },
+    sizeBytes: { type: Number }
+  }
 }, { timestamps: true });
 
 export default mongoose.models.Message || mongoose.model('Message', messageSchema);

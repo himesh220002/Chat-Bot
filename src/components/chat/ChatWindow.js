@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, Cpu, Radio, Activity, ShieldCheck, Orbit, Sparkles, Terminal, Crosshair } from "lucide-react";
+import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, Cpu, Radio, Activity, ShieldCheck, Orbit, Sparkles, Terminal, Crosshair, Paperclip, Image as ImageIcon, X, AlertCircle, Eye } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -40,19 +40,34 @@ const preprocessMarkdown = (content) => {
 };
 
 const AI_MODELS = [
-  { id: "local-gguf", name: "Local Model (LM Studio/Ollama)" },
-  { id: "meta/llama-3.2-11b-vision-instruct", name: "Llama 3.2 11B Vision" },
-  { id: "deepseek-ai/deepseek-v4-flash-0731", name: "DeepSeek V4 Flash" },
-  { id: "deepseek-ai/deepseek-v4-pro-0813", name: "DeepSeek V4 Pro" },
-  { id: "kimi-k3", name: "Kimi K3" },
-  { id: "nvidia/nemotron-3.5-lightning-30b-a3b", name: "Nemotron 3.5 Lightning" },
-  { id: "meta/muse-glimmer-30b", name: "Muse Glimmer 30B" },
-  { id: "minimaxai/minimax-m3", name: "MiniMax M3 Preview" },
-  { id: "stepfun-ai/step-3.7-flash", name: "Step 3.7 Flash" },
-  { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", name: "Nemotron 3 Nano Omni" },
-  { id: "nvidia/ising-calibration-1.5-31b", name: "Ising Calibration 1.5" },
-  { id: "poolside/laguna-xs-2.1", name: "Laguna XS 2.1" },
-  { id: "google/diffusiongemma-26b-a4b-it", name: "DiffusionGemma 26B" }
+  // ⚡ FAST & RELIABLE (Primary Defaults)
+  { id: "nvidia/nemotron-3.5-lightning-30b-a3b", name: "Nemotron 3.5 Lightning (⚡ Fast ~20s)", category: "⚡ Fast & Reliable", badge: "⚡ Fast" },
+  { id: "openai/gpt-oss-20b", name: "GPT-OSS 20B MoE (⚡ Fast ~10s)", category: "⚡ Fast & Reliable", badge: "⚡ Fast" },
+  { id: "deepseek-ai/deepseek-v4-flash-0731", name: "DeepSeek V4 Flash (⚡ Fast MoE)", category: "⚡ Fast & Reliable", badge: "⚡ Fast MoE" },
+  { id: "poolside/laguna-xs-2.1", name: "Laguna XS 2.1 (⚡ Fast Agentic)", category: "⚡ Fast & Reliable", badge: "💻 Code" },
+
+  // 👁️ VISION & MULTIMODAL (Images & Screenshots)
+  { id: "meta/llama-3.2-11b-vision-instruct", name: "Llama 3.2 11B Vision", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision" },
+  { id: "google/diffusiongemma-26b-a4b-it", name: "DiffusionGemma 26B Vision", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision" },
+  { id: "meta/muse-glimmer-30b", name: "Muse Glimmer 30B (👁️ Vision ~40s)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision" },
+  { id: "nvidia/ising-calibration-1.5-31b", name: "Ising Quantum Calibration VLM", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ VLM" },
+  { id: "meta/llama-3.2-90b-vision-instruct", name: "Llama 3.2 90B Vision (⏳ High Traffic)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision Heavy" },
+  { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", name: "Nemotron Omni Reasoning (⏳ High Traffic)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Omni Vision" },
+  { id: "moonshotai/kimi-k3", name: "Kimi K3 Multimodal (⏳ High Traffic)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision MoE" },
+  { id: "minimaxai/minimax-m3", name: "MiniMax M3 Preview (⏳ Retiring Soon)", category: "👁️ Vision & Multimodal", isVision: true, badge: "👁️ Vision" },
+
+  // 💻 CODING & PRO MODELS
+  { id: "deepseek-ai/deepseek-v4-pro-0813", name: "DeepSeek V4 Pro (1M Context)", category: "💻 Coding & Pro Models", badge: "💻 Code MoE" },
+  { id: "mistralai/mistral-nemotron", name: "Mistral Nemotron Agentic", category: "💻 Coding & Pro Models", badge: "💻 Agentic" },
+
+  // 🧠 DEEP THINKERS & HEAVY REASONING (High Load / Cold Start)
+  { id: "google/gemma-4-31b-it", name: "Gemma 4 31B Reasoning (🧠 Heavy)", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Reasoning" },
+  { id: "openai/gpt-oss-120b", name: "GPT-OSS 120B MoE Reasoning (🧠 Heavy)", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Heavy MoE" },
+  { id: "nvidia/nemotron-3-super-120b-a12b", name: "Nemotron 3 Super 120B", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Deep Thinker" },
+  { id: "nvidia/nemotron-3-ultra-550b-a55b", name: "Nemotron 3 Ultra 550B", category: "🧠 Deep Thinkers & Heavy Reasoning", badge: "🧠 Deep Thinker" },
+
+  // 🏠 LOCAL INTEGRATION
+  { id: "local-gguf", name: "Local Model (LM Studio/Ollama)", category: "🏠 Local Integration", badge: "🏠 Local" }
 ];
 
 mermaid.initialize({
@@ -383,7 +398,7 @@ const MarkdownComponents = {
   td: ({ node, ...props }) => <td className="p-2.5 border-t border-white/5 text-cyan-50/80" {...props} />
 };
 
-const AutoResizeTextarea = ({ newMessage, setNewMessage, handleSendMessage, sending }) => {
+const AutoResizeTextarea = ({ newMessage, setNewMessage, handleSendMessage, sending, onPaste }) => {
   const textareaRef = useRef(null);
 
   useEffect(() => {
@@ -398,6 +413,7 @@ const AutoResizeTextarea = ({ newMessage, setNewMessage, handleSendMessage, send
       ref={textareaRef}
       value={newMessage}
       onChange={(e) => setNewMessage(e.target.value)}
+      onPaste={onPaste}
       onKeyDown={(e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
@@ -412,6 +428,57 @@ const AutoResizeTextarea = ({ newMessage, setNewMessage, handleSendMessage, send
   );
 };
 
+const compressAndProcessImage = (file) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX_DIM = 1600;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_DIM || height > MAX_DIM) {
+        if (width > height) {
+          height = Math.round((height * MAX_DIM) / width);
+          width = MAX_DIM;
+        } else {
+          width = Math.round((width * MAX_DIM) / height);
+          height = MAX_DIM;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const mimeType = file.type === 'image/gif' || file.type === 'image/png' ? file.type : 'image/jpeg';
+      const base64 = canvas.toDataURL(mimeType, 0.85);
+
+      const imageId = `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      resolve({
+        file,
+        objectUrl,
+        base64,
+        meta: {
+          imageId,
+          originalName: file.name,
+          mimeType: file.type,
+          width,
+          height,
+          sizeBytes: file.size
+        }
+      });
+    };
+    img.onerror = (err) => {
+      URL.revokeObjectURL(objectUrl);
+      reject(err);
+    };
+    img.src = objectUrl;
+  });
+};
+
 const ChatWindow = ({ chatId }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -423,8 +490,123 @@ const ChatWindow = ({ chatId }) => {
   const [dbEcosystem, setDbEcosystem] = useState('checking');
   const [globalDbStatus, setGlobalDbStatus] = useState('checking');
   const [localDbStatus, setLocalDbStatus] = useState('checking');
+  const [pendingImages, setPendingImages] = useState([]);
+  const [imageError, setImageError] = useState("");
+
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const pendingImagesRef = useRef([]);
+  useEffect(() => {
+    pendingImagesRef.current = pendingImages;
+  }, [pendingImages]);
+
+  const clearPendingImages = useCallback(() => {
+    pendingImagesRef.current.forEach(img => {
+      if (img.objectUrl) URL.revokeObjectURL(img.objectUrl);
+    });
+    setPendingImages([]);
+    setImageError("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, []);
+
+  const removePendingImage = (indexToRemove) => {
+    setPendingImages(prev => {
+      const target = prev[indexToRemove];
+      if (target?.objectUrl) {
+        URL.revokeObjectURL(target.objectUrl);
+      }
+      return prev.filter((_, idx) => idx !== indexToRemove);
+    });
+  };
+
+  useEffect(() => {
+    clearPendingImages();
+  }, [chatId, clearPendingImages]);
+
+  useEffect(() => {
+    return () => {
+      pendingImagesRef.current.forEach(img => {
+        if (img.objectUrl) URL.revokeObjectURL(img.objectUrl);
+      });
+    };
+  }, []);
+
+  const processImageFiles = async (files) => {
+    if (!files || !files.length) return;
+
+    setImageError("");
+
+    if (pendingImages.length + files.length > 2) {
+      setImageError("Maximum 2 images allowed per message.");
+    }
+
+    const availableSlots = 2 - pendingImages.length;
+    const filesToProcess = files.slice(0, availableSlots);
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const newProcessedImages = [];
+
+    for (const file of filesToProcess) {
+      if (!validTypes.includes(file.type)) {
+        setImageError("Unsupported format. Please attach JPEG, PNG, WEBP, or GIF.");
+        continue;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        setImageError("File size exceeds 5MB limit.");
+        continue;
+      }
+
+      try {
+        const processed = await compressAndProcessImage(file);
+        newProcessedImages.push(processed);
+      } catch (err) {
+        console.error("Failed to process image preview:", err);
+      }
+    }
+
+    if (newProcessedImages.length > 0) {
+      setPendingImages(prev => [...prev, ...newProcessedImages].slice(0, 2));
+    }
+  };
+
+  const handleImageSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    processImageFiles(files);
+  };
+
+  const handlePaste = async (e) => {
+    const items = e.clipboardData?.items;
+    if (!items || !items.length) return;
+
+    const pastedFiles = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type && item.type.startsWith('image/')) {
+        const blob = item.getAsFile();
+        if (blob) {
+          const ext = blob.type.split('/')[1] || 'png';
+          const file = new File(
+            [blob],
+            `pasted_image_${Date.now()}.${ext}`,
+            { type: blob.type || 'image/png' }
+          );
+          pastedFiles.push(file);
+          break; // Extract 1 image per paste action to prevent duplicate formats
+        }
+      }
+    }
+
+    if (pastedFiles.length > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      await processImageFiles(pastedFiles);
+    }
+  };
 
   const last10Messages = messages.slice(-10);
   const tokenCount = Math.ceil(last10Messages.reduce((acc, msg) => acc + (msg.message || '').split(/\s+/).length, 0) * 1.3);
@@ -514,17 +696,26 @@ const ChatWindow = ({ chatId }) => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || sending) return;
-    const userMessageContent = newMessage.trim();
+    if ((!newMessage.trim() && pendingImages.length === 0) || sending) return;
+
+    const userMessageContent = newMessage.trim() || (pendingImages.length > 0 ? "Analyze attached image(s)." : "");
+    const imagePayloads = pendingImages.map(img => img.base64);
+    const imageMetaPayloads = pendingImages.map(img => img.meta);
+
     setNewMessage("");
     setSending(true);
     setStreamingMessage("");
+
+    // Revoke and clear pending images immediately from React state
+    clearPendingImages();
+
     abortControllerRef.current = new AbortController();
     const optimisticUserMsg = {
       _id: Date.now().toString(),
       message: userMessageContent,
       role: 'user',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...(imageMetaPayloads.length > 0 ? { imageMetas: imageMetaPayloads, imageMeta: imageMetaPayloads[0] } : {})
     };
     setMessages((prev) => [...prev, optimisticUserMsg]);
     let currentStreamText = '';
@@ -536,7 +727,14 @@ const ChatWindow = ({ chatId }) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ content: userMessageContent, model: selectedModel }),
+        body: JSON.stringify({
+          content: userMessageContent,
+          model: selectedModel,
+          images: imagePayloads,
+          imageMetas: imageMetaPayloads,
+          image: imagePayloads[0] || null,
+          imageMeta: imageMetaPayloads[0] || null
+        }),
         signal: abortControllerRef.current.signal
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -702,16 +900,25 @@ const ChatWindow = ({ chatId }) => {
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="relative appearance-none rounded-[12px] bg-white/[0.06] backdrop-blur border border-white/10 text-white py-2 pl-3 pr-9 mono text-[.8rem] tracking-wide focus:outline-none focus:border-cyan-400/30 focus:bg-white/[0.08] cursor-pointer min-w-[200px]"
+              className="relative appearance-none rounded-[12px] bg-white/[0.06] backdrop-blur border border-white/10 text-white py-2 pl-3 pr-9 mono text-[.8rem] tracking-wide focus:outline-none focus:border-cyan-400/30 focus:bg-white/[0.08] cursor-pointer min-w-[240px] max-w-[340px] truncate"
             >
-              {AI_MODELS.map((model) => (
-                <option key={model.id} value={model.id} className="bg-[#0a1f2a]">
-                  {model.name}
-                </option>
+              {Array.from(new Set(AI_MODELS.map(m => m.category))).map((cat) => (
+                <optgroup key={cat} label={cat} className="bg-[#061824] text-cyan-400 font-bold py-1">
+                  {AI_MODELS.filter(m => m.category === cat).map((model) => (
+                    <option key={model.id} value={model.id} className="bg-[#0a1f2a] text-cyan-100 font-normal">
+                      {model.name} {model.isVision ? '👁️ (Vision)' : ''}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
           </div>
+          {AI_MODELS.find(m => m.id === selectedModel)?.isVision && (
+            <span className="hidden sm:flex items-center gap-1 mono text-[9.5px] tracking-wider text-cyan-300 bg-cyan-400/10 border border-cyan-400/25 px-2.5 py-1 rounded-full backdrop-blur">
+              <Eye size={11} className="text-cyan-400" /> VISION READY
+            </span>
+          )}
         </div>
       </div>
 
@@ -755,6 +962,17 @@ const ChatWindow = ({ chatId }) => {
                       }`} style={{ transform: `translateZ(${isUser ? 16 : 14}px)` }}>
                       {isUser && <div className="absolute top-0 left-6 right-6 h-px bg-white/55 hidden lg:block" />}
                       {!isUser && <div className="absolute left-0 top-3 bottom-3 w-px bg-cyan-400/40 hidden lg:block" />}
+
+                      {isUser && (msg.imageMetas?.length > 0 || msg.imageMeta) && (
+                        <div className="mb-2 flex flex-wrap gap-1.5">
+                          {(msg.imageMetas || [msg.imageMeta]).map((meta, i) => (
+                            <div key={meta.imageId || i} className="p-1.5 px-2 bg-[rgba(0,19,26,0.35)] border border-[#00eaff]/30 rounded flex items-center gap-1.5 mono text-[10px] text-[#00131a]">
+                              <ImageIcon size={13} className="shrink-0 text-[#00131a]" />
+                              <span className="font-bold">📷 image analyzed (not stored) • {meta.originalName || 'Image'} ({Math.round(meta.sizeBytes / 1024)}KB)</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {isUser ? (
                         <div className="whitespace-pre-wrap break-words text-[#00131a] font-semibold">{msg.message}</div>
@@ -820,43 +1038,112 @@ const ChatWindow = ({ chatId }) => {
       {/* Input Deck — floating glass console */}
       <div className="relative p-1 lg:p-0 shrink-0">
         <div className="max-w-5xl mx-auto">
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageSelect}
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            className="hidden"
+          />
+
+          {/* Image Validation Error Alert */}
+          {imageError && (
+            <div className="mb-2 px-3 py-2 bg-red-950/80 border border-red-500/30 rounded-lg text-red-200 mono text-xs flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle size={14} className="text-red-400 shrink-0" />
+                <span>{imageError}</span>
+              </div>
+              <button type="button" onClick={() => setImageError("")} className="text-red-400 hover:text-white">
+                <X size={12} />
+              </button>
+            </div>
+          )}
+
           <div className="relative group" style={{ transformStyle: 'preserve-3d' }}>
             <div className="deck-glow rounded-[16px]" />
-            <form onSubmit={handleSendMessage} className="relative flex items-end glass-holo bg-white/[0.06] border-white/10 focus-within:border-cyan-400/30 focus-within:shadow-[0_0_28px_rgba(0,234,255,0.18),0_12px_32px_rgba(0,0,0,0.42)] transition-all overflow-hidden" style={{ borderRadius: '8px', transform: 'translateZ(10px)' }}>
+            <form onSubmit={handleSendMessage} className="relative flex flex-col glass-holo bg-white/[0.06] border-white/10 focus-within:border-cyan-400/30 focus-within:shadow-[0_0_28px_rgba(0,234,255,0.18),0_12px_32px_rgba(0,0,0,0.42)] transition-all overflow-hidden" style={{ borderRadius: '8px', transform: 'translateZ(10px)' }}>
 
-              {/* side sensor */}
-              <div className="hidden lg:flex flex-col items-center gap-1 pl-3 pr-2 py-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.9)]" />
-                <div className="w-px flex-1 bg-gradient-to-b from-cyan-400/40 to-transparent min-h-[24px]" />
-                <Radio size={10} className="text-cyan-400/60" />
-              </div>
+              {/* Image Box Preview Container Inside Message Box */}
+              {pendingImages.length > 0 && (
+                <div className="w-full p-2 bg-[#081822]/90 border-b border-cyan-400/20 flex items-center gap-2.5 overflow-x-auto">
+                  {pendingImages.map((img, index) => (
+                    <div key={img.meta.imageId || index} className="relative group shrink-0 rounded-lg overflow-hidden border border-cyan-400/40 bg-black/40 shadow-[0_0_12px_rgba(0,234,255,0.2)]">
+                      <img src={img.objectUrl} alt={`Attachment ${index + 1}`} className="w-16 h-16 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePendingImage(index)}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md hover:bg-red-500 transition-transform hover:scale-110 cursor-pointer"
+                        title="Remove image"
+                      >
+                        <X size={12} />
+                      </button>
+                      <div className="absolute bottom-0 inset-x-0 bg-black/75 px-1 py-0.5 text-center">
+                        <span className="mono text-[8px] text-cyan-200 block truncate max-w-[60px]">{img.meta.originalName}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {pendingImages.length < 2 && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-16 h-16 rounded-lg border border-dashed border-cyan-400/30 hover:border-cyan-400/60 bg-white/[0.03] hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-1 text-cyan-300/70 hover:text-cyan-200 transition-all cursor-pointer shrink-0"
+                      title="Add 2nd image"
+                    >
+                      <Paperclip size={14} />
+                      <span className="mono text-[8px] tracking-wider">+ ADD</span>
+                    </button>
+                  )}
+                </div>
+              )}
 
-              <AutoResizeTextarea
-                newMessage={newMessage}
-                setNewMessage={setNewMessage}
-                handleSendMessage={handleSendMessage}
-                sending={sending}
-              />
+              <div className="flex items-end w-full relative">
+                {/* side sensor */}
+                <div className="hidden lg:flex flex-col items-center gap-1 pl-3 pr-2 py-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.9)]" />
+                  <div className="w-px flex-1 bg-gradient-to-b from-cyan-400/40 to-transparent min-h-[24px]" />
+                  <Radio size={10} className="text-cyan-400/60" />
+                </div>
 
-              {/* action cluster */}
-              <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
-                {sending ? (
+                <AutoResizeTextarea
+                  newMessage={newMessage}
+                  setNewMessage={setNewMessage}
+                  handleSendMessage={handleSendMessage}
+                  sending={sending}
+                  onPaste={handlePaste}
+                />
+
+                {/* action cluster */}
+                <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => abortControllerRef.current?.abort()}
-                    className="rounded-[12px] bg-red-500/15 border border-red-400/30 text-red-300 hover:bg-red-500/25 px-3 py-2 mono text-[11px] tracking-widest font-bold flex items-center gap-1.5 transition-colors backdrop-blur"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={sending || pendingImages.length >= 2}
+                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-cyan-300 flex items-center justify-center transition-all cursor-pointer shrink-0 disabled:opacity-40"
+                    title={pendingImages.length >= 2 ? "Maximum 2 images attached" : "Attach temporary image (max 2 images, 5MB each)"}
                   >
-                    <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" /> ABORT
+                    <Paperclip size={16} />
                   </button>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={!newMessage.trim()}
-                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] bg-cyan-400 text-black hover:bg-cyan-300 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 border border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)] flex items-center justify-center transition-all hover:scale-[1.03] active:scale-95"
-                  >
-                    <Send size={16} className="ml-0.5" />
-                  </button>
-                )}
+
+                  {sending ? (
+                    <button
+                      type="button"
+                      onClick={() => abortControllerRef.current?.abort()}
+                      className="rounded-[12px] bg-red-500/15 border border-red-400/30 text-red-300 hover:bg-red-500/25 px-3 py-2 mono text-[11px] tracking-widest font-bold flex items-center gap-1.5 transition-colors backdrop-blur"
+                    >
+                      <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" /> ABORT
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={(!newMessage.trim() && pendingImages.length === 0) || sending}
+                      className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] bg-cyan-400 text-black hover:bg-cyan-300 disabled:opacity-30 disabled:bg-white/10 disabled:text-white/30 border border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)] flex items-center justify-center transition-all hover:scale-[1.03] active:scale-95"
+                    >
+                      <Send size={16} className="ml-0.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
 
@@ -890,7 +1177,7 @@ const ChatWindow = ({ chatId }) => {
                 <div className="h-px flex-1 bg-gradient-to-l from-transparent to-cyan-400/30" />
               </div>
               <p className="mono text-[10px] tracking-[0.12em] text-cyan-100/30 hidden lg:flex items-center gap-1.5">
-                <ShieldCheck size={12} className="text-cyan-400/40" /> QUANTUM ENCRYPTED • AI MAY HALLUCINATE
+                <ShieldCheck size={12} className="text-cyan-400/40" /> Images are processed temporarily for this message and are never saved.
               </p>
             </div>
           </div>

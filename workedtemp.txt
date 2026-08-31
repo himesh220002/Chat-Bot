@@ -1,0 +1,52 @@
+depricated-
+
+[DEBUG] Model google/gemma-2b is currently unavailable or deprecated (status: 404)
+[0] [DEBUG] Model google/gemma-3-4b-it is currently unavailable or deprecated (status: 404)
+[0] [DEBUG] Model nvidia/mistral-nemo-minitron-8b-8k-instruct is currently unavailable or deprecated (status: 404)
+[0] [DEBUG] Model ibm/granite-3.0-8b-instruct is currently unavailable or deprecated (status: 404)
+[0] [DEBUG] Model zyphra/zamba2-7b-instruct is currently unavailable or deprecated (status: 404)
+[DEBUG] Model mistralai/codestral-22b-instruct-v0.1 is currently unavailable or deprecated (status: 404)
+ibm/granite-34b-code-instruct is currently unavailable or deprecated (status: 404)
+[DEBUG] Model bigcode/starcoder2-15b is currently unavailable or deprecated (status: 404)
+[DEBUG] Model ai21labs/jamba-1.5-large-instruct is currently unavailable or deprecated (status: 404)
+[0] [DEBUG] Model writer/palmyra-creative-122b is currently unavailable or deprecated (status: 404)
+
+DEBUG] Model google/gemma-3-12b-it is currently unavailable or deprecated (status: 404)
+
+[DEBUG] Model nv-mistralai/mistral-nemo-12b-instruct is currently unavailable or deprecated (status: 404)
+[DEBUG] Model nvidia/llama-3.1-nemotron-70b-instruct is currently unavailable or deprecated (status: 404)
+[DEBUG] Model mistralai/mistral-large-2-instruct is currently unavailable or deprecated (status: 404)
+[DEBUG] Model mistralai/mixtral-8x22b-v0.1 is currently unavailable or deprecated (status: 404)
+[DEBUG] Model 01-ai/yi-large is currently unavailable or deprecated (status: 404)
+
+🤖 [AI GENERATED] minimaxai/minimax-m3: ⚠️ **Model Unavailable / Retired**  The AI model `... generated
+🤖 [AI GENERATED] moonshotai/kimi-k3: ⚠️ **Model Unavailable / Retired**  The AI model `... generated
+
+worked- 
+
+
+taking time aprox 20s [AI GENERATED] nvidia/nemotron-3.5-lightning-30b-a3b: Hi! How can I help you today? generated
+10s to respond 🤖 [AI GENERATED] openai/gpt-oss-20b: Hello! How can I help you today? generated
+took 40s to 1minute to responds🤖 [AI GENERATED] meta/muse-glimmer-30b: Hi! How can I help you today? generated
+quick responded - [AI GENERATED] nvidia/ising-calibration-1.5-31b: Newton's laws of motion are fundamental principles... generated  
+30s - [DEBUG] Routing to NVIDIA API for model: minimaxai/minimax-m3
+fast enough - [DEBUG] Routing to NVIDIA API for model: poolside/laguna-xs-2.1
+fast 🤖 [AI GENERATED] nvidia/nemotron-3-super-120b-a12b: ```python def merge_sort(arr):     """     Sorts a... generated
+fast 🤖 [AI GENERATED] nvidia/nemotron-3-ultra-550b-a55b: Here is a standard implementation of **Quick Sort*... generated
+
+denied-
+
+
+keep on loading- 
+
+[DEBUG] Routing to NVIDIA API for model: moonshotai/kimi-k3
+[DEBUG] Routing to NVIDIA API for model: meta/llama-3.2-90b-vision-instruct
+[DEBUG] Routing to NVIDIA API for model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+[DEBUG] Routing to NVIDIA API for model: deepseek-ai/deepseek-v4-pro-0813
+[DEBUG] Routing to NVIDIA API for model: google/gemma-4-31b-it
+[DEBUG] Routing to NVIDIA API for model: openai/gpt-oss-120b
+
+
+
+.,,,,, there are few models which are keep on loading this might be happning if something missing to connect or the nivdi try connecting have huge load at this time ,,, there are depricated models we can not say if its actually depricated or not coz its tested on my own checks but can you check it online if its actually depricated or not if not i will re check and fix try to run those,, these are free endpoint models im testing via nvidia api key so good thing is i have not seen 403 issue here,,, there are surly replied modals working some might slow some might fast it can be different based on what kind of prompt asked or network situation or nivda server load or model own load around the world ,,,,, 
+after checking from usefull sources so mark tick if the info is correct , if not add a note right next to it  
