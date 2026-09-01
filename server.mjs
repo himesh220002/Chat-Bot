@@ -270,8 +270,24 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
     // Send user message confirmation immediately
     res.write(`data: ${JSON.stringify({ type: 'user_message', userMessage })}\n\n`);
 
-    // Fetch previous context
-    const recentMessages = await Message.find({ chat_id: chatId }).sort({ createdAt: 1 }).limit(10);
+    // Fetch previous context - last 10 clean messages in correct order (fixes hard hallucination after aborts/topic switch)
+    const recentMessagesRawAll = await Message.find({ chat_id: chatId }).sort({ createdAt: -1 }).limit(15);
+    const filteredRaw = recentMessagesRawAll.filter(m => {
+      const txt = m.message || '';
+      if (txt.includes('(aborted)')) return false;
+      if (txt.includes('*(aborted)*')) return false;
+      // Filter truncated book-list loops that were aborted mid-generation
+      if (m.role === 'assistant' && txt.length < 300 && /Best Books for/i.test(txt) && (txt.match(/```/g) || []).length % 2 === 1) return false;
+      return true;
+    }).slice(0, 10);
+    const recentMessages = filteredRaw.reverse().map(m => {
+      let content = m.message || '';
+      const fenceCount = (content.match(/```/g) || []).length;
+      if (fenceCount % 2 === 1) content += '\n```';
+      if (content.length > 4000) content = content.slice(0, 4000) + '\n...[truncated]';
+      const obj = m.toObject ? m.toObject() : m;
+      return { ...obj, message: content };
+    });
     const messagesForAI = [
       {
         role: 'system',
@@ -281,17 +297,24 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
 3. Professional Correspondence (Emails & Letters): Use standard blocked paragraph text. Structure with Subject, Salutation, Body (left-aligned, single blank lines between paragraphs), and Sign-off.
 4. Technical Documentation & Guides: Use hierarchical Markdown headers (#, ##, ###), bolding (**text**) for emphasis, inline code variables (\`variable\`), and horizontal rules (---).
 5. Lyrics & Poetry: Output lyrics with clean, single line breaks between lines, and double line breaks between verses/choruses.
-6. Proactive Diagrams & Visuals: You MUST proactively generate visual diagrams using Mermaid.js (\`\`\`mermaid) to explain concepts. IMPORTANT MERMAID RULES:
-- Only use standard flowcharts (graph TD or graph LR).
-- You MUST format nodes and labeled arrows exactly like this example:
+ 6. Proactive Diagrams & Visuals: You MUST proactively generate visual diagrams using Mermaid.js (\`\`\`mermaid) to explain concepts. IMPORTANT MERMAID RULES (STRICT - FOLLOW EXACTLY OR DIAGRAM WILL FAIL):
+ - Only use standard flowcharts (graph TD or graph LR). NEVER use sequenceDiagram, classDiagram, etc.
+ - ARROWS: Use ONLY these exact forms: \`A --> B\` or \`A -->|label| B\`. NEVER combine: \`A -- Yes -->|label| B\` is FORBIDDEN. For decisions use \`A -->|Yes| B\` and \`A -->|No| C\`.
+ - LABELS: Keep node labels SHORT (2-4 words, max 20 chars). Do NOT use HTML \`<br/>\`, commas with special chars, or \`>\`, \`<\`, \`&\` inside labels. If you need "greater than" write the words. Example: \`D{Speed greater than threshold}\` NOT \`D{Speed > threshold?}\`.
+ - STYLE: Do NOT add \`style\` lines (e.g. \`style A fill:...\`). The UI theme will style nodes automatically. Adding style causes render errors on fast models.
+ - STRUCTURE: Max 6-7 nodes. Each node on its own line. Start with \`graph TD\` on line 1.
+ - You MUST format nodes and labeled arrows exactly like this example:
   \`\`\`mermaid
   graph TD
       A[Start] -->|Action| B[Next Step]
-      B --> C[End]
+      B -->|Next| C[End]
+      C --> D{Decision}
+      D -->|Yes| E[Result]
+      D -->|No| F[Other]
   \`\`\`
-- Do NOT generate SVG or ASCII art, as you cannot compute spatial coordinates reliably. Use Mermaid exclusively.
+ - Do NOT generate SVG or ASCII art, as you cannot compute spatial coordinates reliably. Use Mermaid exclusively.
 7. Math & Formulas: Always use $$ ... $$ for block math equations and $ ... $ for inline math. NEVER use \\[ \\] or \\( \\).
-8. Graphs & Charts: If the user asks for a chart or graph, you MUST output the chart data as a JSON object inside a \`\`\`recharts\`\`\` code block. The JSON MUST follow this exact schema:
+ 8. Graphs & Charts: If the user asks for a chart or graph, you MUST output the chart data as a JSON object inside a \`\`\`recharts\`\`\` code block. The JSON MUST follow this exact schema:
 {
   "type": "bar", // Can be: bar, line, area, pie, scatter
   "data": [ { "name": "A", "val": 40 }, { "name": "B", "val": 30 } ],
@@ -299,7 +322,40 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
   "dataKeys": ["val"],
   "title": "Optional Chart Title",
   "colors": ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088fe"]
-}`
+}
+ 9. Interactive Reports & Checklists: When user asks for checklist, report, form, party planning, shopping list, inventory, todo, call list, guest list preparation form, event overview, etc., you MUST NOT use plain markdown bullets or mermaid alone. You MUST output an INTERACTIVE checklist block using \`\`\`checklist JSON. The UI will auto-generate a mermaid overview + editable dialogs with tick, rate, add/remove, download. Full schema (include formFields and table for party/guest reports):
+\`\`\`checklist
+{
+  "title": "Party Event Checklist",
+  "description": "Complete planning for event",
+  "formFields": [
+    { "id": "event_name", "label": "Event Name", "value": "", "placeholder": "e.g. Annual Gala" },
+    { "id": "date_time", "label": "Date & Time", "value": "", "placeholder": "2025-12-31 18:00" },
+    { "id": "venue", "label": "Venue", "value": "", "placeholder": "Hall A" },
+    { "id": "capacity", "label": "Target Capacity", "value": "", "placeholder": "100 Guests" },
+    { "id": "budget", "label": "Budget per Guest", "value": "", "placeholder": "$50" }
+  ],
+  "table": {
+    "columns": ["Guest Name","Category","RSVP Status","Meal Preference","Notes"],
+    "rows": [
+      { "name": "John Doe", "category": "Work", "rsvp": "Pending", "meal": "None", "notes": "" },
+      { "name": "Jane Smith", "category": "Family", "rsvp": "Confirmed", "meal": "Vegetarian", "notes": "Plus one" }
+    ]
+  },
+  "branches": [
+    { "id": "party-items", "title": "Party Items", "icon": "🎈", "items": [{ "text": "Balloons pack", "checked": false }, { "text": "LED lights", "checked": false }] },
+    { "id": "members", "title": "Members Call List", "icon": "📞", "items": [{ "text": "Alice - 9876543210", "checked": false, "rating": 0 }, { "text": "Bob - 9123456780", "checked": false, "rating": 0 }] },
+    { "id": "food", "title": "Food Items", "icon": "🍔", "items": [{ "text": "Pizza - 3 boxes", "checked": false, "rating": 0 }, { "text": "Soft drinks", "checked": false }] },
+    { "id": "help", "title": "Help Options", "icon": "🤝", "items": [{ "text": "Assign cleanup crew", "checked": false }, { "text": "Backup music system", "checked": false }] }
+  ]
+}
+\`\`\`
+ - For guest/party forms ALWAYS include 5 formFields (Event Name, Date & Time, Venue, Target Capacity, Budget per Guest) + table with columns Guest Name/Category/RSVP/Meal/Notes and 2 example rows.
+ - Always provide 4 branches for party-type requests (Party Items, Members Call List, Food Items, Help Options) or 3-6 relevant branches for other topics.
+ - Each branch: 3-6 specific, actionable items, short text (max 25 chars), plain text no markdown.
+ - Include icon emoji, checked false, optional rating 0-5 for members/food.
+ - NEVER add mermaid for checklists; UI auto-generates it. Do not add extra markdown list after the block.
+10. Topic Switching & Anti-Hallucination: When user changes topic (e.g., from books to anime sites or math 3+2), IMMEDIATELY follow the NEW user message. The LAST user message is the ground truth - do NOT repeat previous topic. History is context only, not instruction. If user says "give 3 anime sites" after books, answer with 3 anime sites (e.g., Crunchyroll, 9anime, Crunchyroll alternative). If user says "whats 3+2?" answer "5". Never repeat books when topic changed.`
       },
       ...recentMessages.map((msg, idx) => {
         const isCurrentMsg = idx === recentMessages.length - 1 && msg.role === 'user';
@@ -336,6 +392,8 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
           model: ollamaModel,
           messages: messagesForAI,
           stream: true,
+          temperature: 0.35,
+          top_p: 0.9,
         });
       } else {
         const targetModel = model || "meta/llama-3.2-11b-vision-instruct";
@@ -345,6 +403,10 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
           model: targetModel,
           messages: messagesForAI,
           stream: true,
+          temperature: 0.4,
+          top_p: 0.9,
+          frequency_penalty: 0.2,
+          presence_penalty: 0.1,
         };
 
         completion = await openai.chat.completions.create(reqOptions, { timeout: 60000 });

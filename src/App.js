@@ -17,6 +17,7 @@ function App() {
     } else {
       localStorage.removeItem("selectedChatId");
     }
+    window.dispatchEvent(new CustomEvent("chat_changed", { detail: { chatId: selectedChat } }));
   }, [selectedChat]);
 
   if (loading) {

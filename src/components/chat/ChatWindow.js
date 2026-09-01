@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, Cpu, Radio, Activity, ShieldCheck, Orbit, Sparkles, Terminal, Crosshair, Paperclip, Image as ImageIcon, X, AlertCircle, Home } from "lucide-react";
+import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, Cpu, Radio, Activity, ShieldCheck, Orbit, Sparkles, Terminal, Crosshair, Paperclip, Image as ImageIcon, X, AlertCircle, Home, FileText, FileJson, Plus, BookOpen, ExternalLink, Link2 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -9,12 +9,54 @@ import 'katex/dist/katex.min.css';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import mermaid from 'mermaid';
+import ChecklistRenderer from './ChecklistRenderer';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts';
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000/api";
+
+const extractResourcesFromMessages = (messages) => {
+  const resources = [];
+  const seen = new Set();
+  messages.forEach(msg => {
+    if (msg.role !== 'assistant') return;
+    const text = msg.message || '';
+    // Markdown links [title](url)
+    const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g;
+    let m;
+    while ((m = mdLinkRegex.exec(text)) !== null) {
+      const title = m[1].trim().slice(0, 80);
+      const url = m[2].trim().replace(/[.,;!?]+$/, '');
+      if (!seen.has(url)) {
+        seen.add(url);
+        try {
+          const domain = new URL(url).hostname.replace(/^www\./, '');
+          resources.push({ title: title || domain, url, domain, msgId: msg._id, snippet: title.slice(0, 60), type: 'MD_LINK' });
+        } catch {}
+      }
+    }
+    // Bare URLs
+    const bareRegex = /https?:\/\/[^\s\)\]]+/g;
+    let bareMatch;
+    const bareMatches = text.match(bareRegex) || [];
+    // Use while to avoid double count, but already seen check
+    bareMatches.forEach(raw => {
+      const url = raw.trim().replace(/[.,;!?]+$/, '').replace(/\)$/, '');
+      if (!seen.has(url)) {
+        seen.add(url);
+        // avoid if already part of md link
+        try {
+          const domain = new URL(url).hostname.replace(/^www\./, '');
+          // skip if domain is same as already added markdown link domain + title duplicate
+          resources.push({ title: domain, url, domain, msgId: msg._id, snippet: '', type: 'URL' });
+        } catch {}
+      }
+    });
+  });
+  return resources;
+};
 
 const preprocessMarkdown = (content) => {
   if (!content) return content;
@@ -78,10 +120,12 @@ mermaid.initialize({
   flowchart: {
     htmlLabels: true,
     curve: 'basis',
-    padding: 4,
-    nodeSpacing: 18,
-    rankSpacing: 32,
-    wrappingWidth: 220
+    padding: 8,
+    nodeSpacing: 26,
+    rankSpacing: 44,
+    wrappingWidth: 170,
+    diagramPadding: 10,
+    useMaxWidth: false
   },
   themeVariables: {
     darkMode: true,
@@ -101,7 +145,7 @@ mermaid.initialize({
     edgeLabelBackground: '#ff4655',
     tertiaryTextColor: '#ffffff',
     fontFamily: 'Rajdhani, JetBrains Mono, sans-serif',
-    fontSize: '12px'
+    fontSize: '13px'
   }
 });
 
@@ -128,29 +172,92 @@ const TerminalLoader = () => {
   );
 };
 
+const sanitizeMermaid = (raw) => {
+  let s = String(raw).replace(/^mermaid\s+/i, '').trim();
+  // Normalize graph directive
+  s = s.replace(/^graph\s+(TD|LR|BT|RL)\s*/i, 'graph $1\n');
+  // Strip style/classDef that fast models hallucinate – theme handles styling
+  s = s.replace(/^\s*style\s+.*$/gm, '');
+  s = s.replace(/^\s*classDef\s+.*$/gm, '');
+  s = s.replace(/^\s*class\s+.*$/gm, '');
+  // Fix arrow typos: --| -> -->|
+  s = s.replace(/--\s*\|/g, '-->|');
+  // Fix double label: D -- Yes -->|Slow down| E  -> D -->|Yes| E (keep first)
+  s = s.replace(/(\w+)\s*--\s*([^|\n-]+?)\s*-->\s*\|([^|]+)\|/g, '$1 -->|$2|');
+  // Fix duplicate pipe close: -->|label|> -> -->|label|
+  s = s.replace(/-+>\s*\|([^|]+)\|\s*>/g, '-->|$1| ');
+  s = s.replace(/-\.+>/g, '-.->');
+  // Sanitize diamond labels containing > < & to avoid parser breaking on "Speed > threshold?"
+  s = s.replace(/\{([^}]*)\}/g, (m, inner) => {
+    if (/[><&]/.test(inner)) {
+      const cleaned = inner.replace(/>/g, ' greater than ').replace(/</g, ' less than ').replace(/&/g, ' and ').replace(/\s+/g, ' ').trim();
+      if (cleaned !== inner) return `{"${cleaned}"}`;
+    }
+    return m;
+  });
+  s = s.replace(/<br\s*\/?>/gi, '<br/>');
+  s = s.replace(/\n{3,}/g, '\n\n');
+  return s.trim();
+};
+
+const aggressiveFix = (raw) => {
+  const sanitized = sanitizeMermaid(raw);
+  // If still fails, extract only graph + arrows, drop everything else
+  const lines = sanitized.split('\n').map(l => l.trim()).filter(Boolean);
+  const keep = [];
+  for (const l of lines) {
+    if (/^graph\s+(TD|LR|BT|RL)/i.test(l)) keep.push(l);
+    else if (l.includes('-->') && !l.startsWith('style')) {
+      keep.push(l.split('//')[0].trim()); // strip inline comments
+    }
+  }
+  if (keep.length < 2) return `graph TD\n  A[Start] --> B[End]`;
+  return keep.join('\n');
+};
+
 const MermaidDiagram = ({ chart, isStreaming }) => {
   const [svg, setSvg] = useState('');
   const [hasError, setHasError] = useState(false);
+  const [sanitizedPreview, setSanitizedPreview] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
   const [id] = useState(() => `mermaid-${Math.random().toString(36).substr(2, 9)}`);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(chart);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
 
   useEffect(() => {
     if (isStreaming) return;
-    const sanitizedChart = chart
-      .replace(/^mermaid\s+/i, '')
-      .replace(/-+>\s*\|([^|]+)\|\s*>/g, '-->|$1| ')
-      .replace(/-\.+>/g, '-.->')
-      .trim();
+    const sanitizedChart = sanitizeMermaid(chart);
+    setSanitizedPreview(sanitizedChart);
     let isMounted = true;
     const renderDiagram = async () => {
+      const tryRender = async (code) => {
+        await mermaid.parse(code);
+        const { svg: renderedSvg } = await mermaid.render(id + '-' + Date.now(), code);
+        return renderedSvg.replace(/<svg/, '<svg preserveAspectRatio="xMidYMid meet"');
+      };
       try {
-        await mermaid.parse(sanitizedChart);
-        const { svg: renderedSvg } = await mermaid.render(id, sanitizedChart);
+        const svgOut = await tryRender(sanitizedChart);
         if (isMounted) {
-          setSvg(renderedSvg);
+          setSvg(svgOut);
           setHasError(false);
         }
       } catch (err) {
-        if (isMounted) setHasError(true);
+        // fallback aggressive fix (handles Nemotron double-label hallucinations)
+        try {
+          const fixed = aggressiveFix(chart);
+          setSanitizedPreview(fixed);
+          const svgOut2 = await tryRender(fixed);
+          if (isMounted) {
+            setSvg(svgOut2);
+            setHasError(false);
+          }
+        } catch (err2) {
+          if (isMounted) setHasError(true);
+        }
       }
     };
     renderDiagram();
@@ -159,15 +266,27 @@ const MermaidDiagram = ({ chart, isStreaming }) => {
 
   if (hasError) {
     return (
-      <div className="relative my-4">
-        <div className="absolute top-2 right-2 mono text-[10px] tracking-widest text-red-300 bg-red-950/60 px-2 py-1 sci-panel-cut-sm border border-red-500/30 z-10">
-          INVALID DIAGRAM • SYNAPTIC ERROR
+      <div className="relative my-4 sci-panel sci-panel-cut-sm border-red-500/30 bg-[#081e28]/90 overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 bg-red-500/10 border-b border-red-500/20">
+          <span className="mono text-[10px] tracking-[0.18em] text-red-300 flex items-center gap-1.5"><AlertCircle size={12} className="text-red-400" /> INVALID DIAGRAM • SYNAPTIC ERROR</span>
+          <div className="flex items-center gap-2">
+            <button onClick={handleCopy} className="mono text-[10px] tracking-widest px-2 py-1 bg-black/20 border border-white/10 text-white/70 hover:text-white hover:border-red-400/30 transition-colors flex items-center gap-1 cursor-pointer">
+              {isCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />} {isCopied ? 'COPIED' : 'COPY SOURCE'}
+            </button>
+          </div>
+        </div>
+        <div className="p-3 mono text-[10px] leading-relaxed text-red-200/70 bg-red-950/20 border-b border-red-500/10">
+          Fast models (e.g. Nemotron) sometimes emit <span className="text-white font-bold">D -- Yes --&gt;|label|</span> or <span className="text-white font-bold">style</span> hallucinations. Auto-fix attempted – showing source for manual correction.
+          {sanitizedPreview && sanitizedPreview !== chart && (
+            <div className="mt-2 text-cyan-300/60">Auto-fixed preview differs – retry will use sanitized version.</div>
+          )}
         </div>
         <SyntaxHighlighter
           language="mermaid"
           style={vscDarkPlus}
           PreTag="div"
-          className="sci-panel sci-panel-cut-sm !m-0 !bg-[#081e28]/90 border border-red-500/20"
+          className="!m-0 !bg-[#081e28] border-0"
+          customStyle={{ margin: 0, padding: '1rem', background: 'transparent', fontSize: '12px' }}
         >
           {chart}
         </SyntaxHighlighter>
@@ -180,25 +299,29 @@ const MermaidDiagram = ({ chart, isStreaming }) => {
   }
 
   return (
-    <div className="relative w-full my-5 bg-[#081e28] border border-cyan-400/20 shadow-[0_0_24px_rgba(0,234,255,0.14)] overflow-hidden" style={{ clipPath: 'polygon(8px 0,100% 0,100% calc(100% - 8px), calc(100% - 8px) 100%,0 100%,0 8px)' }}>
+    <div className="group relative w-full my-5 bg-[#081e28] border border-cyan-400/20 hover:border-cyan-400/30 shadow-[0_0_24px_rgba(0,234,255,0.14)] hover:shadow-[0_0_32px_rgba(0,234,255,0.20)] overflow-hidden transition-all duration-300" style={{ clipPath: 'polygon(8px 0,100% 0,100% calc(100% - 8px), calc(100% - 8px) 100%,0 100%,0 8px)' }}>
       <div className="flex items-center justify-between px-3 py-2.5 bg-cyan-400/10 border-b border-cyan-400/15 mono text-[10px] tracking-[0.18em] text-cyan-200">
         <span className="flex items-center gap-1.5"><Sparkles size={12} className="text-cyan-400" /> HOLO • DIAGRAM MATRIX</span>
-        <span className="opacity-60 flex items-center gap-2">
-          <span className="hidden sm:inline mono text-[8px] text-white/30">SCROLL • DRAG PAN</span>
-          <span>VECTOR NODE</span>
+        <span className="flex items-center gap-2">
+          <span className="hidden sm:inline mono text-[8px] text-white/30 opacity-60">AUTO FIT • DRAG PAN</span>
+          <span className="hidden sm:inline opacity-60">VECTOR NODE</span>
+          <button onClick={handleCopy} className="ml-2 mono text-[9px] tracking-widest px-2 py-1 bg-black/20 border border-cyan-400/20 text-cyan-200/70 hover:text-cyan-200 hover:border-cyan-400/40 hover:bg-cyan-400/10 transition-colors flex items-center gap-1 cursor-pointer">
+            {isCopied ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />} {isCopied ? 'COPIED' : 'COPY'}
+          </button>
         </span>
       </div>
-      <div className="relative w-full bg-[#061a24] overflow-hidden" style={{ minHeight: '200px', height: '600px', maxHeight: '68vh' }}>
-        <div className="absolute inset-0 overflow-auto flex items-start justify-center p-2 mermaid-viewport bg-[radial-gradient(ellipse_at_center,rgba(0,234,255,0.04),transparent_70%)]">
+      <div className="relative w-full bg-[#061a24] min-h-[160px] h-fit max-h-[80vh] overflow-auto">
+        <div className="w-full min-h-[160px] flex justify-center items-start p-2 md:p-3 mermaid-viewport bg-[radial-gradient(ellipse_at_center,rgba(0,234,255,0.04),transparent_70%)] overflow-visible">
           <div
             dangerouslySetInnerHTML={{ __html: svg }}
-            className="mermaid-svg-wrap w-full flex justify-center items-start [&>svg]:!max-w-full [&>svg]:!w-auto [&>svg]:!h-auto [&>svg]:block [&>svg]:mx-auto"
-            style={{ maxWidth: '100%', minWidth: '0' }}
+            className="mermaid-svg-wrap w-full flex justify-center items-start [&>svg]:!max-w-none [&>svg]:!w-auto [&>svg]:!h-auto [&>svg]:block [&>svg]:mx-auto [&>svg]:min-w-[320px] md:[&>svg]:min-w-[420px]"
+            style={{ maxWidth: 'none', minWidth: '0' }}
           />
         </div>
-        <div className="absolute bottom-2 right-2 flex gap-1.5">
-          <span className="mono text-[8px] tracking-widest bg-black/50 border border-white/10 px-2 py-1 rounded-full text-white/40 backdrop-blur">SCROLL TO PAN • 600PX MIN</span>
-        </div>
+      </div>
+      <div className="flex items-center justify-between px-3 py-1.5 bg-[#061a24] border-t border-cyan-400/10 mono text-[8px] tracking-widest text-white/25">
+        <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" /> RENDERED • HOLO ENGINE</span>
+        <span className="hidden sm:inline text-cyan-300/40">PINCH • SCROLL TO EXPLORE</span>
       </div>
     </div>
   );
@@ -332,12 +455,19 @@ const CodeBlock = ({ node, inline, className, children, isStreaming, ...props })
         if (config && config.type && Array.isArray(config.data) && config.xAxisKey) {
           return <ChartRenderer configStr={String(children)} />;
         }
+        // Auto-detect checklist/report JSON in generic json block
+        if (config && (config.branches || config.sections || config.categories || config.checklist)) {
+          return <ChecklistRenderer raw={String(children)} isStreaming={isStreaming} />;
+        }
       } catch (e) { }
     } else {
       return <ChartRenderer configStr={String(children)} />;
     }
   }
   if (!inline && match) {
+    if (['checklist', 'report', 'form', 'todo'].includes(match[1].toLowerCase())) {
+      return <ChecklistRenderer raw={String(children)} isStreaming={isStreaming} />;
+    }
     if (match[1].toLowerCase() === 'mermaid') {
       return <MermaidDiagram chart={String(children)} isStreaming={isStreaming} />;
     }
@@ -386,18 +516,254 @@ const CodeBlock = ({ node, inline, className, children, isStreaming, ...props })
   );
 };
 
+const InteractiveTaskItem = ({ node, children, ...props }) => {
+  const initialChecked = node?.properties?.checked ?? false;
+  const [checked, setChecked] = useState(initialChecked);
+  const content = React.Children.toArray(children).filter(child => {
+    if (React.isValidElement(child) && child.props?.type === 'checkbox') return false;
+    if (React.isValidElement(child) && child.type === 'input') return false;
+    return true;
+  });
+  const taskText = content.map(c => typeof c === 'string' ? c : (c?.props?.children ? String(c.props.children).replace(/\n/g,' ') : '')).join('').trim().slice(0,120);
+  return (
+    <li
+      onClick={() => setChecked(!checked)}
+      data-checked={checked ? 'true' : 'false'}
+      data-task-text={taskText}
+      className={`pl-1 pr-2 py-2 raj text-white font-medium text-[13px] lg:text-[14px] leading-6 flex gap-2.5 items-start rounded-[10px] border cursor-pointer select-none transition-all ${checked ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-white/[0.03] border-white/5 hover:border-white/10 hover:bg-white/[0.06]'}`}
+      {...props}
+    >
+      <span className={`w-5 h-5 rounded-[6px] border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${checked ? 'bg-emerald-400 border-emerald-400 text-black shadow-[0_0_8px_rgba(52,211,153,0.4)]' : 'bg-transparent border-white/20 hover:border-cyan-400/40'}`}>
+        {checked && <Check size={12} strokeWidth={3} />}
+      </span>
+      <span className={`flex-1 flex flex-wrap gap-1 ${checked ? 'line-through text-white/40' : 'text-white'}`}>{content}</span>
+    </li>
+  );
+};
+
+const AssistantMessageActions = ({ message }) => {
+  const hasChecklist = /- \[[ x]\]/i.test(message) || /Preparation Checklist/i.test(message) || /Guest Tracking/i.test(message);
+  const hasJson = /"event_name"/.test(message) || /```json/.test(message);
+  const isChecklistBlock = /```checklist/i.test(message);
+  if (isChecklistBlock) return null;
+  if (!hasChecklist && !hasJson) return null;
+  const download = (ext, content, mime) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `guest-list-${Date.now()}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const handleCopy = () => navigator.clipboard.writeText(message);
+  const handleDownloadMD = (e) => {
+    const bubble = e.currentTarget.closest('.holo-msg');
+    let finalMd = message;
+    let liveSection = '';
+    if (bubble) {
+      const formInputs = bubble.querySelectorAll('input[data-form-field]');
+      if (formInputs.length) {
+        const hasValues = Array.from(formInputs).some(inp => inp.value.trim());
+        if (hasValues) {
+          liveSection += `\n\n---\n## ✏️ Edited Event Overview (Live)\n`;
+          formInputs.forEach(inp => {
+            const label = inp.getAttribute('data-form-field') || 'Field';
+            const val = inp.value.trim();
+            liveSection += `- **${label}** ${val || '_(empty)_'}\n`;
+          });
+        }
+      }
+      const taskLis = bubble.querySelectorAll('li[data-checked]');
+      if (taskLis.length) {
+        liveSection += `\n## ✅ Edited Checklist (Live State)\n`;
+        taskLis.forEach(li => {
+          const checked = li.getAttribute('data-checked') === 'true';
+          const text = li.getAttribute('data-task-text') || li.textContent.trim().replace(/\n/g,' ').slice(0,120);
+          liveSection += `- [${checked ? 'x' : ' '}] ${text}\n`;
+        });
+      }
+      const guestTable = bubble.querySelector('[data-editable-guest-table]');
+      if (guestTable) {
+        const rows = guestTable.querySelectorAll('tbody tr');
+        const hasRows = Array.from(rows).some(tr => Array.from(tr.querySelectorAll('input[data-guest-field]')).some(inp => inp.value.trim()));
+        if (hasRows) {
+          liveSection += `\n## 👥 Guest Tracking Table (Edited)\n`;
+          liveSection += `| Guest Name | Category | RSVP Status | Meal Preference | Notes |\n|---|---|---|---|---|\n`;
+          rows.forEach(tr => {
+            const inputs = tr.querySelectorAll('input[data-guest-field]');
+            if (inputs.length) {
+              const vals = Array.from(inputs).map(inp => inp.value.trim() || ' ');
+              if (vals.some(v => v.trim())) liveSection += `| ${vals.join(' | ')} |\n`;
+            }
+          });
+        }
+      }
+    }
+    if (liveSection) finalMd += liveSection;
+    download('md', finalMd, 'text/markdown');
+  };
+  const handleDownloadJSON = (e) => {
+    const bubble = e.currentTarget.closest('.holo-msg');
+    let jsonObj = null;
+    const match = message.match(/```json\s*\n([\s\S]*?)\n```/);
+    try { jsonObj = match ? JSON.parse(match[1].trim()) : JSON.parse(message); } catch { jsonObj = { raw: message }; }
+    if (bubble) {
+      const formInputs = bubble.querySelectorAll('input[data-form-field]');
+      const formData = {};
+      formInputs.forEach(inp => { const k = inp.getAttribute('data-form-field')?.replace(':','').trim(); if (k) formData[k] = inp.value; });
+      const taskLis = bubble.querySelectorAll('li[data-checked]');
+      const checklist = Array.from(taskLis).map(li => ({ text: li.getAttribute('data-task-text') || li.textContent.trim().slice(0,120), checked: li.getAttribute('data-checked')==='true' }));
+      const guestRows = [];
+      const guestTable = bubble.querySelector('[data-editable-guest-table]');
+      if (guestTable) {
+        guestTable.querySelectorAll('tbody tr').forEach(tr => {
+          const inputs = tr.querySelectorAll('input[data-guest-field]');
+          if (inputs.length) {
+            const vals = Array.from(inputs).map(i => i.value.trim());
+            if (vals.some(v=>v)) guestRows.push({ guestName: vals[0]||'', category: vals[1]||'', rsvp: vals[2]||'', meal: vals[3]||'', notes: vals[4]||'' });
+          }
+        });
+      }
+      jsonObj = {
+        ...jsonObj,
+        _editedAt: new Date().toISOString(),
+        _liveState: {
+          formFields: formData,
+          checklist,
+          guestTable: guestRows
+        }
+      };
+      // If original had guests array, merge
+      if (jsonObj.guests && guestRows.length) {
+        jsonObj.guests = guestRows.map(r => ({ name: r.guestName, category: r.category, rsvp: r.rsvp, meal: r.meal, notes: r.notes }));
+      }
+    }
+    download('json', JSON.stringify(jsonObj, null, 2), 'application/json');
+  };
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2 p-2.5 rounded-[10px] bg-white/[0.04] border border-cyan-400/10">
+      <span className="mono text-[9px] tracking-[0.16em] text-cyan-300/50">CHECKLIST ACTIONS:</span>
+      <button onClick={handleCopy} className="mono text-[10px] tracking-widest px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-white/70 hover:text-cyan-200 flex items-center gap-1.5 cursor-pointer transition-colors"><Copy size={12}/> COPY</button>
+      <button onClick={handleDownloadMD} className="mono text-[10px] tracking-widest px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-white/70 hover:text-cyan-200 flex items-center gap-1.5 cursor-pointer transition-colors"><FileText size={12}/> DOWNLOAD MD (LIVE)</button>
+      <button onClick={handleDownloadJSON} className="mono text-[10px] tracking-widest px-3 py-1.5 rounded-full bg-cyan-400/15 hover:bg-cyan-400/25 border border-cyan-400/30 text-cyan-200 flex items-center gap-1.5 cursor-pointer transition-colors"><FileJson size={12}/> DOWNLOAD JSON (LIVE)</button>
+    </div>
+  );
+};
+
+
+const EditableFormFieldLi = ({ label, ...props }) => {
+  const [value, setValue] = useState('');
+  return (
+    <li className="list-none pl-0 flex items-center gap-3 w-full py-1.5" data-form-field={label} {...props}>
+      <span className="mono text-[11px] tracking-[0.14em] text-cyan-300 min-w-[130px] shrink-0">{label}</span>
+      <input
+        data-form-field={label}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        placeholder="Type here..."
+        className="flex-1 bg-[#061a24] border border-white/10 focus:border-cyan-400/30 rounded px-3 py-1.5 mono text-xs text-white placeholder:text-white/25 outline-none"
+      />
+    </li>
+  );
+};
+
+const EditableGuestTable = (props) => {
+  const columns = ["Guest Name", "Category", "RSVP Status", "Meal Preference", "Notes"];
+  const [rows, setRows] = useState([]);
+  const addRow = () => setRows(prev => [...prev, { id: Date.now() + Math.random(), values: Array(columns.length).fill('') }]);
+  const updateCell = (rowIdx, colIdx, val) => setRows(prev => prev.map((r,i) => i===rowIdx ? { ...r, values: r.values.map((v,j) => j===colIdx ? val : v) } : r));
+  const removeRow = (rowIdx) => setRows(prev => prev.filter((_,i) => i!==rowIdx));
+  return (
+    <div className="overflow-x-auto mb-4 sci-panel sci-panel-cut-sm border-cyan-400/20" data-editable-guest-table>
+      <table className="w-full text-left border-collapse text-sm raj">
+        <thead className="bg-cyan-400/10 border-b border-cyan-400/20">
+          <tr>
+            {columns.map(col => <th key={col} className="p-2.5 mono text-[11px] tracking-widest text-cyan-200 whitespace-nowrap">{col}</th>)}
+            <th className="p-2.5 w-10"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr><td colSpan={columns.length+1} className="p-6 text-center mono text-xs tracking-widest text-white/20 border-t border-white/5">NO GUESTS • ADD BELOW</td></tr>
+          ) : (
+            rows.map((row, rIdx) => (
+              <tr key={row.id} className="border-t border-white/5">
+                {row.values.map((val, cIdx) => (
+                  <td key={cIdx} className="p-1.5">
+                    <input
+                      data-guest-field={`${rIdx}-${cIdx}`}
+                      value={val}
+                      onChange={e => updateCell(rIdx, cIdx, e.target.value)}
+                      placeholder={columns[cIdx].slice(0,6)}
+                      className="w-full bg-[#061a24] border border-white/10 focus:border-cyan-400/30 rounded px-2 py-1.5 mono text-xs text-white placeholder:text-white/20 outline-none"
+                    />
+                  </td>
+                ))}
+                <td className="p-1.5">
+                  <button onClick={() => removeRow(rIdx)} className="w-7 h-7 rounded-full bg-red-500/10 hover:bg-red-500 border border-red-500/20 text-red-300 hover:text-white flex items-center justify-center cursor-pointer"><X size={12}/></button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+      <div className="p-2 bg-black/10 border-t border-white/5 flex justify-center">
+        <button onClick={addRow} className="mono text-[11px] tracking-widest px-4 py-1.5 rounded-full bg-cyan-400/15 hover:bg-cyan-400/25 border border-cyan-400/30 text-cyan-200 flex items-center gap-1.5 cursor-pointer"><Plus size={12}/> ADD GUEST</button>
+      </div>
+    </div>
+  );
+};
+
 const MarkdownComponents = {
   code: CodeBlock,
   h1: ({ node, children, ...props }) => <h1 className="display text-[18px] lg:text-[22px] font-extrabold mt-5 lg:mt-7 mb-3 lg:mb-4 text-white border-b border-white/10 pb-2 lg:pb-3 tracking-wide leading-tight" {...props}>{children}</h1>,
   h2: ({ node, children, ...props }) => <h2 className="display text-[15px] lg:text-[18px] font-bold mt-4 lg:mt-6 mb-2 lg:mb-3 text-white tracking-wide leading-snug" {...props}>{children}</h2>,
   h3: ({ node, children, ...props }) => <h3 className="display text-[14px] lg:text-[16px] font-bold mt-4 lg:mt-5 mb-2 lg:mb-3 text-white tracking-wide" {...props}>{children}</h3>,
   p: ({ node, children, ...props }) => <p className="mb-3 lg:mb-4 last:mb-0 leading-6 lg:leading-7 text-white raj text-[13px] lg:text-[15.5px] font-medium tracking-[0.01em]" {...props}>{children}</p>,
-  ul: ({ node, children, ...props }) => <ul className="list-none pl-0 mb-4 lg:mb-5 space-y-1.5 lg:space-y-2" {...props}>{children}</ul>,
+  ul: ({ node, children, ...props }) => {
+    const isTaskList = node?.properties?.className?.includes('contains-task-list');
+    return <ul className={`${isTaskList ? 'list-none pl-0 space-y-2' : 'list-none pl-0 mb-4 lg:mb-5 space-y-1.5 lg:space-y-2'}`} {...props}>{children}</ul>;
+  },
   ol: ({ node, children, ...props }) => <ol className="list-decimal pl-5 lg:pl-6 mb-4 lg:mb-5 space-y-1.5 lg:space-y-2 marker:text-white marker:font-bold text-[13px] lg:text-[14px]" {...props}>{children}</ol>,
-  li: ({ node, children, ...props }) => <li className="pl-1 raj text-white font-medium text-[13px] lg:text-[15px] leading-6 lg:leading-7 flex flex-wrap gap-2 lg:gap-2.5 before:content-['▸'] before:text-white before:font-bold before:mono before:text-xs lg:before:text-sm before:mt-0.5" {...props}>{children}</li>,
+  li: ({ node, children, ...props }) => {
+    const isTask = node?.properties?.className?.includes('task-list-item');
+    if (isTask) return <InteractiveTaskItem node={node} {...props}>{children}</InteractiveTaskItem>;
+    const text = React.Children.toArray(children).map(c => typeof c === 'string' ? c : (c?.props?.children ? String(c.props.children) : '')).join('').trim();
+    const isFormField = /^(Event Name|Date & Time|Venue|Target Capacity|Budget per Guest|Event Name:|Date & Time:|Venue:|Target Capacity:|Budget per Guest:)/i.test(text) || (text.includes(':') && /_/.test(text));
+    if (isFormField) {
+      const label = text.split(':')[0].trim() + ':';
+      if (text.includes('_')) return <EditableFormFieldLi label={label} {...props} />;
+    }
+    return <li className="pl-1 raj text-white font-medium text-[13px] lg:text-[15px] leading-6 lg:leading-7 flex flex-wrap gap-2 lg:gap-2.5 before:content-['▸'] before:text-white before:font-bold before:mono before:text-xs lg:before:text-sm before:mt-0.5" {...props}>{children}</li>;
+  },
+  input: ({ node, checked, ...props }) => {
+    if (props.type === 'checkbox') return null;
+    return <input {...props} />;
+  },
   a: ({ node, children, ...props }) => <a className="text-cyan-300 hover:text-white hover:underline decoration-white/30 underline-offset-4 font-semibold" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>,
   blockquote: ({ node, ...props }) => <blockquote className="border-l-[3px] border-white pl-5 py-3 my-5 bg-white/[0.06] mono text-[14px] leading-6 text-white font-medium" style={{ clipPath: 'polygon(4px 0,100% 0,100% calc(100% - 4px), calc(100% - 4px) 100%,0 100%,0 4px)' }} {...props} />,
-  table: ({ node, ...props }) => <div className="overflow-x-auto mb-4 sci-panel sci-panel-cut-sm border-cyan-400/20"><table className="w-full text-left border-collapse text-sm raj" {...props} /></div>,
+  table: ({ node, ...props }) => {
+    const getText = (children) => {
+      let t = '';
+      const walk = (c) => {
+        if (typeof c === 'string') t += c + ' ';
+        else if (Array.isArray(c)) c.forEach(walk);
+        else if (React.isValidElement(c) && c.props?.children) walk(c.props.children);
+        else if (c && typeof c === 'object' && c.props?.children) walk(c.props.children);
+      };
+      walk(children);
+      return t;
+    };
+    try {
+      const headerText = getText(props.children) + ' ' + getText(node?.children);
+      if (/guest\s*name/i.test(headerText) || /rsvp/i.test(headerText) || /meal/i.test(headerText) || /category/i.test(headerText)) {
+        return <EditableGuestTable {...props} />;
+      }
+    } catch {}
+    // Fallback: treat any table with 4+ columns as editable guest-like if previous heading was Guest Tracking
+    return <div className="overflow-x-auto mb-4 sci-panel sci-panel-cut-sm border-cyan-400/20"><table className="w-full text-left border-collapse text-sm raj" {...props} /></div>;
+  },
   thead: ({ node, ...props }) => <thead className="bg-cyan-400/10 border-b border-cyan-400/20" {...props} />,
   th: ({ node, ...props }) => <th className="p-2.5 mono text-[11px] tracking-widest text-cyan-200 whitespace-nowrap" {...props} />,
   td: ({ node, ...props }) => <td className="p-2.5 border-t border-white/5 text-cyan-50/80" {...props} />
@@ -499,6 +865,11 @@ const ChatWindow = ({ chatId }) => {
   const [imageError, setImageError] = useState("");
 
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const shouldAutoScrollRef = useRef(true);
+  const lastScrollTopRef = useRef(0);
+  const [, setIsAtBottom] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(true);
   const abortControllerRef = useRef(null);
   const fileInputRef = useRef(null);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -706,9 +1077,95 @@ const ChatWindow = ({ chatId }) => {
     fetchMessages();
   }, [fetchMessages]);
 
+  // Smart auto-scroll: allow slight scroll-up while generating without snapping back
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    lastScrollTopRef.current = el.scrollTop;
+    const onScroll = () => {
+      const current = el.scrollTop;
+      const prev = lastScrollTopRef.current;
+      const delta = current - prev;
+      const atBottom = el.scrollHeight - current - el.clientHeight < 48; // tight threshold
+      // User scrolled up even slightly -> pause follow, even if still near bottom
+      if (delta < -3) {
+        shouldAutoScrollRef.current = false;
+      } else if (delta > 3 && atBottom) {
+        shouldAutoScrollRef.current = true;
+      } else {
+        shouldAutoScrollRef.current = atBottom;
+      }
+      setIsAtBottom(atBottom);
+      setIsFollowing(shouldAutoScrollRef.current);
+      lastScrollTopRef.current = current;
+    };
+    // Also catch wheel/touch intent immediately
+    const onWheel = (e) => {
+      if (e.deltaY < 0) {
+        shouldAutoScrollRef.current = false;
+        setIsFollowing(false);
+      }
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    el.addEventListener('wheel', onWheel, { passive: true });
+    onScroll();
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAutoScrollRef.current) return;
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const isStreamingChunk = !!streamingMessage;
+    requestAnimationFrame(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: isStreamingChunk ? 'auto' : 'smooth', block: 'end' });
+      } else {
+        el.scrollTo({ top: el.scrollHeight, behavior: isStreamingChunk ? 'auto' : 'smooth' });
+      }
+    });
   }, [messages, sending, streamingMessage]);
+
+  const scrollToBottom = useCallback(() => {
+    shouldAutoScrollRef.current = true;
+    setIsFollowing(true);
+    setIsAtBottom(true);
+    const el = messagesContainerRef.current;
+    if (el) {
+      lastScrollTopRef.current = el.scrollHeight;
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, []);
+
+  // Broadcast resources to dashboard (Image 2 style sticky per-chat)
+  useEffect(() => {
+    const resources = extractResourcesFromMessages(messages);
+    window.dispatchEvent(new CustomEvent('chat_resources_update', { detail: { resources, activeMsgId: messages.length ? messages[messages.length - 1]._id : null } }));
+  }, [messages]);
+
+  // Sticky per-message: highlight resource group for currently visible assistant message
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container || !messages.length) return;
+    const msgEls = container.querySelectorAll('[data-message-id][data-role="assistant"]');
+    if (!msgEls.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length) {
+          const msgId = visible[0].target.getAttribute('data-message-id');
+          window.dispatchEvent(new CustomEvent('chat_visible_resources', { detail: { activeMsgId: msgId } }));
+        }
+      },
+      { root: container, rootMargin: '-10% 0px -60% 0px', threshold: 0.1 }
+    );
+    msgEls.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [messages]);
 
 
 
@@ -723,6 +1180,15 @@ const ChatWindow = ({ chatId }) => {
     setNewMessage("");
     setSending(true);
     setStreamingMessage("");
+    // Re-enable auto-follow when user sends — then smart scroll takes over
+    shouldAutoScrollRef.current = true;
+    setIsFollowing(true);
+    setIsAtBottom(true);
+    lastScrollTopRef.current = 1e9;
+    // Ensure container jumps to bottom instantly for new user message
+    requestAnimationFrame(() => {
+      messagesContainerRef.current?.scrollTo({ top: messagesContainerRef.current.scrollHeight, behavior: 'smooth' });
+    });
 
     // Revoke and clear pending images immediately from React state
     clearPendingImages();
@@ -873,7 +1339,7 @@ const ChatWindow = ({ chatId }) => {
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0">
       {/* Header – floating glass command bar */}
-      <div className="relative z-40 px-3 lg:px-5 py-3 border-b border-white/8 bg-gradient-to-r from-white/[0.04] via-transparent to-white/[0.02] backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0 rounded-t-[22px]">
+      <div className="relative z-40 px-3 lg:px-5 lg:py-3 border-b border-white/20 bg-gradient-to-r from-white/[0.04] via-transparent to-white/[0.02] backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0 rounded-t-[22px]">
         <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <div className="flex items-center gap-4 min-w-0">
           <div className="hidden lg:flex w-10 h-10 rounded-[12px] bg-cyan-400/15 border border-white/10 items-center justify-center backdrop-blur">
@@ -883,7 +1349,7 @@ const ChatWindow = ({ chatId }) => {
             {/* <h3 className="display font-bold text-white tracking-[0.12em] text-sm flex items-center gap-2">
               <span className="text-cyan-400">&gt;_</span> INPUTCHAT <span className="hidden sm:inline mono text-[9px] tracking-[0.2em] text-cyan-300/60 border border-cyan-400/20 px-1.5 py-0.5 sci-panel-cut-sm bg-cyan-400/10">COCKPIT LINK</span>
             </h3> */}
-            <div className="hidden lg:flex flex-wrap items-center gap-2 mt-1">
+            <div className="hidden lg:flex flex-wrap items-center gap-2 sm:mt-1">
               {/* DB cluster HUD — single row button toggle with status LED */}
               <div className="flex items-center gap-1.5 p-1 rounded-full bg-white/[0.04] backdrop-blur border border-white/10 shadow-md">
                 <button
@@ -938,7 +1404,7 @@ const ChatWindow = ({ chatId }) => {
         </div>
 
         {/* Custom Model Selector HUD — glass with dark blue hover traveler */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center justify-center sm:justify-start gap-2 shrink-0">
           <div className="relative" ref={modelDropdownRef}>
             {/* Trigger Button */}
             <button
@@ -957,7 +1423,7 @@ const ChatWindow = ({ chatId }) => {
 
             {/* Dropdown Menu Popup */}
             {isModelDropdownOpen && (
-              <div className="absolute lg:right-0 mt-2 w-[320px] max-h-[380px] overflow-y-auto rounded-[14px] bg-[#07131e] border border-cyan-400/50 shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[100] py-1.5 scrollbar-thin divide-y divide-white/5">
+              <div className="absolute left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 lg:left-auto lg:right-0 lg:translate-x-0 mt-2 w-[calc(100vw-24px)] sm:w-[320px] max-w-[320px] max-h-[380px] overflow-y-auto rounded-[14px] bg-[#07131e] border border-cyan-400/50 shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[100] py-1.5 scrollbar-thin divide-y divide-white/5">
                 {Array.from(new Set(AI_MODELS.map((m) => m.category))).map((cat) => (
                   <div key={cat} className="py-1">
                     {/* Category Header */}
@@ -969,6 +1435,7 @@ const ChatWindow = ({ chatId }) => {
                     <div className="space-y-0.5 mt-0.5">
                       {AI_MODELS.filter((m) => m.category === cat).map((model) => {
                         const isSelected = model.id === selectedModel;
+                        const isLocalModel = model.id.startsWith('local-') || cat === "🏠 Local Integration";
                         return (
                           <button
                             key={model.id}
@@ -979,9 +1446,14 @@ const ChatWindow = ({ chatId }) => {
                             className={`w-full text-left px-3.5 py-2 mono text-[11.5px] tracking-wide transition-colors flex items-center justify-between group ${isSelected
                               ? "bg-cyan-500/25 text-cyan-200 font-bold border-l-3 border-cyan-400 shadow-[inset_0_0_12px_rgba(6,182,212,0.15)]"
                               : "text-slate-300 hover:bg-[#0f2a3f] hover:text-cyan-200"
-                              }`}
+                              } ${isLocalModel ? "opacity-60 lg:opacity-100 grayscale-[0.3] lg:grayscale-0" : ""}`}
                           >
-                            <span className="truncate pr-2">{model.name}</span>
+                            <span className="truncate pr-2 flex items-center gap-2">
+                              <span className="truncate">{model.name}</span>
+                              {isLocalModel && (
+                                <span className="lg:hidden shrink-0 mono text-[7px] tracking-[0.12em] bg-white/10 border border-white/10 text-white/40 px-1.5 py-0.5 rounded-full">GRAY • LOCAL</span>
+                              )}
+                            </span>
                             {isSelected && (
                               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)] shrink-0" />
                             )}
@@ -997,10 +1469,10 @@ const ChatWindow = ({ chatId }) => {
         </div>
       </div>
 
-      {/* Messages Area — responsive */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 lg:p-4 scrollbar-thin scroll-smooth relative" style={{ transformStyle: 'preserve-3d' }}>
+      {/* Messages Area — responsive — stable scroll */}
+      <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 lg:p-4 scrollbar-thin relative" style={{ scrollbarGutter: 'stable', transformStyle: 'flat', overscrollBehavior: 'contain' }}>
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(600px 300px at 50% 42%, rgba(0,234,255,0.04), transparent 70%)' }} />
-        <div className="w-full max-w-7xl mx-auto space-y-5 min-h-full flex flex-col relative z-10" style={{ transformStyle: 'preserve-3d' }}>
+        <div className="w-full max-w-7xl mx-auto space-y-5 min-h-full flex flex-col relative z-10">
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-16" style={{ transformStyle: 'preserve-3d' }}>
               <div className="relative w-40 h-40 rounded-[18px] bg-white/[0.06] backdrop-blur border border-white/10 flex items-center justify-center mb-5 shadow-[0_0_28px_rgba(0,234,255,0.16)]" style={{ transform: 'translateZ(18px)' }}>
@@ -1018,8 +1490,8 @@ const ChatWindow = ({ chatId }) => {
             messages.map((msg, index) => {
               const isUser = msg.role === 'user';
               return (
-                <div key={msg._id || index} className={`flex ${isUser ? "justify-end" : "justify-start"} animate-fade-in-up`} style={{ transformStyle: 'preserve-3d' }}>
-                  <div className={`flex ${isUser ? "max-w-[88%] lg:max-w-[90%] flex-col 2xl:flex-row-reverse items-end" : "max-w-[96%] lg:max-w-[90%] flex-col 2xl:flex-row w-full items-start 2xl:items-end"} gap-3 `} style={{ transformStyle: 'preserve-3d' }}>
+                <div key={msg._id || index} data-message-id={msg._id} data-role={msg.role} className={`flex ${isUser ? "justify-end" : "justify-start"} gap-4 items-start animate-fade-in-up`} style={{ transformStyle: 'preserve-3d' }}>
+                  <div className={`flex-1 min-w-0 flex ${isUser ? "max-w-[100%] lg:max-w-[90%] flex-col 2xl:flex-row-reverse items-end ml-auto" : "max-w-[100%] lg:max-w-[90%] flex-col 2xl:flex-row w-full items-start 2xl:items-end"} gap-3 `} style={{ transformStyle: 'preserve-3d' }}>
                     {/* Avatar – floating hologram marker */}
                     <div className={`w-8 h-8 rounded-[10px] flex-shrink-0 flex items-center justify-center border relative overflow-hidden backdrop-blur ${isUser ? "bg-cyan-400 text-black border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)]" : "bg-white/[0.06] border-white/10 text-cyan-200 shadow-[0_0_16px_rgba(0,234,255,0.12)]"
                       }`}>
@@ -1028,7 +1500,7 @@ const ChatWindow = ({ chatId }) => {
                     </div>
 
                     {/* Message Bubble — responsive sharp */}
-                    <div data-index={index % 4} className={`holo-msg relative px-3 lg:px-5 py-2.5 lg:py-3.5 leading-relaxed text-[12.5px] lg:text-[14.5px] overflow-auto max-w-full min-w-0
+                    <div data-index={index % 4} className={`holo-msg relative w-full 2xl:flex-1 px-3 lg:px-5 py-2.5 lg:py-3.5 leading-relaxed text-[12.5px] lg:text-[14.5px] overflow-auto max-w-full min-w-0
                       ${isUser
                         ? "sci-msg-user raj font-medium holo-msg-user"
                         : "sci-msg-bot"
@@ -1050,15 +1522,18 @@ const ChatWindow = ({ chatId }) => {
                       {isUser ? (
                         <div className="whitespace-pre-wrap break-words text-[#00131a] font-semibold">{msg.message}</div>
                       ) : (
-                        <div className="markdown-sci">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-                            rehypePlugins={[rehypeKatex]}
-                            components={MarkdownComponents}
-                          >
-                            {preprocessMarkdown(msg.message)}
-                          </ReactMarkdown>
-                        </div>
+                        <>
+                          <div className="markdown-sci">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                              components={MarkdownComponents}
+                            >
+                              {preprocessMarkdown(msg.message)}
+                            </ReactMarkdown>
+                          </div>
+                          <AssistantMessageActions message={msg.message} />
+                        </>
                       )}
 
                       {/* msg meta */}
@@ -1069,6 +1544,30 @@ const ChatWindow = ({ chatId }) => {
                       </div>
                     </div>
                   </div>
+                  {!isUser && (() => {
+                    const inlineRes = extractResourcesFromMessages([msg]);
+                    if (!inlineRes.length) return null;
+                    return (
+                      <div className="hidden xl:block w-[280px] shrink-0">
+                        <div className="sticky top-4 space-y-2">
+                          <div className="mono text-[9px] tracking-[0.18em] text-amber-300/60 flex items-center gap-1.5 mb-1">
+                            <BookOpen size={10} /> RESOURCES • STICKY
+                          </div>
+                          {inlineRes.map((res, rIdx) => (
+                            <a key={`${res.url}-${rIdx}`} href={res.url} target="_blank" rel="noopener noreferrer" className="group block bg-[#0e1620] border border-white/[0.06] hover:border-amber-400/20 p-2.5" style={{ clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px), calc(100% - 6px) 100%,0 100%,0 6px)' }}>
+                              <div className="flex items-start gap-2">
+                                <img src={`https://www.google.com/s2/favicons?domain=${res.domain}&sz=32`} alt="" className="w-5 h-5 rounded bg-white/10 border border-white/10 shrink-0 mt-0.5" onError={(e)=>{e.currentTarget.style.display='none'}} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="display text-[11px] font-bold text-white group-hover:text-amber-300 leading-tight line-clamp-2 flex items-center gap-1">{res.title || res.domain} <ExternalLink size={10} className="text-white/30 shrink-0" /></div>
+                                  <div className="mono text-[9px] tracking-wide text-cyan-300/50 truncate">{res.domain}</div>
+                                </div>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })
@@ -1076,12 +1575,12 @@ const ChatWindow = ({ chatId }) => {
 
           {sending && (
             <div className="flex justify-start animate-fade-in-up" style={{ transformStyle: 'preserve-3d' }}>
-              <div className="flex max-w-[96%] gap-3 items-end w-full" style={{ transformStyle: 'preserve-3d' }}>
+              <div className="flex max-w-[100%] lg:max-w-[90%] flex-col 2xl:flex-row w-full items-start 2xl:items-end gap-3" style={{ transformStyle: 'preserve-3d' }}>
                 <div className="w-8 h-8 rounded-[10px] bg-white/[0.06] border border-white/10 text-cyan-200 flex items-center justify-center flex-shrink-0 relative overflow-hidden backdrop-blur">
                   <Bot size={14} />
                   <span className="absolute inset-0 bg-cyan-400/8 animate-pulse" />
                 </div>
-                <div className="flex-1 holo-msg sci-msg-bot px-5 py-4 min-h-[56px] flex items-center overflow-hidden relative" style={{ transform: 'translateZ(14px)' }}>
+                <div className="w-full 2xl:flex-1 holo-msg sci-msg-bot px-5 py-4 min-h-[56px] flex items-start overflow-visible relative" style={{ transform: 'translateZ(0px)', contain: 'layout paint' }}>
 
                   {streamingMessage ? (
                     <div className="markdown-sci w-full">
@@ -1106,6 +1605,14 @@ const ChatWindow = ({ chatId }) => {
           )}
           <div ref={messagesEndRef} />
         </div>
+        {!isFollowing && (
+          <button
+            onClick={scrollToBottom}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 mono text-[10px] tracking-[0.18em] px-4 py-1.5 rounded-full bg-[#0a1f2a]/90 backdrop-blur border border-cyan-400/30 text-cyan-200 shadow-[0_8px_24px_rgba(0,0,0,0.5)] hover:bg-cyan-400/15 hover:border-cyan-400/50 transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <ChevronDown size={12} className="animate-bounce" /> {sending ? 'FOLLOWING PAUSED • TAP TO RESUME' : 'JUMP TO BOTTOM'}
+          </button>
+        )}
       </div>
 
       {/* Input Deck — floating glass console */}
