@@ -258,6 +258,7 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
         }
         const title = titleCompletion.choices[0].message.content.trim();
         await Chat.findByIdAndUpdate(chatId, { title });
+        res.write(`data: ${JSON.stringify({ type: 'title_updated', title, chatId })}\n\n`);
       } catch (err) {
         console.error('Failed to generate title', err);
       }

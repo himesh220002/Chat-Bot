@@ -1,0 +1,90 @@
+{
+  "platformName": "InputChat AI Cockpit",
+  "version": "4.7.2",
+  "architecture": "Full-Stack (Node.js Express + React 18 + MongoDB + Ollama)",
+  "features": [
+    {
+      "id": "ghost-mode",
+      "name": "Local Ghost Mode",
+      "category": "Privacy & Infrastructure",
+      "description": "100% offline-first operation using local MongoDB instance (mongodb://localhost:27017) and local Ollama inference models on localhost:11434.",
+      "status": "Operational"
+    },
+    {
+      "id": "privacy-image-selector",
+      "name": "Zero-Persistence Memory Image Pipeline",
+      "category": "Security & Vision",
+      "description": "Converts uploaded images directly to Base64 in volatile memory. Sends payload to vision models (LLaVA-7B / Llama 3.2 Vision) and immediately discards the binary payload without writing to disk or database.",
+      "status": "Operational"
+    },
+    {
+      "id": "dual-db-failover",
+      "name": "Dual Database Ecosystem",
+      "category": "Backend Reliability",
+      "description": "Real-time automatic failover and manual switching between MongoDB Atlas (Global Cloud) and Local Ghost MongoDB.",
+      "status": "Operational"
+    },
+    {
+      "id": "realtime-model-ranking",
+      "name": "Category-Wise Model Ranking Engine",
+      "category": "AI Inference",
+      "description": "Tracks and ranks model performance in real time across 5 distinct categories: Fast, Vision, Coding, Deep Reasoning, and Local Ollama.",
+      "status": "Operational"
+    },
+    {
+      "id": "interactive-checklist-renderer",
+      "name": "Interactive Holo-Checklist Widget",
+      "category": "UI / Visualization",
+      "description": "Auto-detects and renders JSON checklist and report structures with interactive checkable items, star ratings, editable overview forms, data tracking matrices, and multi-format exports (JSON, MD, CSV, SVG).",
+      "status": "Operational"
+    },
+    {
+      "id": "dynamic-charting-recharts",
+      "name": "Native Recharts Integration",
+      "category": "UI / Visualization",
+      "description": "Renders interactive Bar, Line, Area, and Scatter charts from JSON code blocks (```recharts).",
+      "status": "Operational"
+    },
+    {
+      "id": "mermaid-diagrams",
+      "name": "Live Mermaid.js Flowchart Engine",
+      "category": "UI / Visualization",
+      "description": "Parses ```mermaid syntax into interactive vector flowcharts with clickable nodes.",
+      "status": "Operational"
+    },
+    {
+      "id": "realtime-sse-titling",
+      "name": "Real-Time AI Topic Titling",
+      "category": "Chat Management",
+      "description": "Generates concise 3-5 word chat titles asynchronously on the first message and streams title updates to the sidebar in real time without page reloads.",
+      "status": "Operational"
+    },
+    {
+      "id": "pwa-standalone",
+      "name": "PWA Mobile App Viewport Lock",
+      "category": "Mobile / Frontend",
+      "description": "Standalone mobile PWA installation support with viewport height locking (100dvh), safe-area insets padding, and elastic scroll prevention.",
+      "status": "Operational"
+    },
+    {
+      "id": "immutable-model-tagging",
+      "name": "Immutable Model Source Tagging",
+      "category": "UI / UX",
+      "description": "Locks the exact model name (e.g. ORBITAL • QWEN 2.5 CODER 7B) on assistant messages permanently upon generation.",
+      "status": "Operational"
+    }
+  ],
+  "supportedModels": {
+    "local": [
+      "qwen2.5-coder:7b",
+      "llava:7b-vision",
+      "deepseek-r1:7b",
+      "llama3.1:8b"
+    ],
+    "cloud": [
+      "meta/llama-3.2-11b-vision-instruct",
+      "nvidia/nemotron-3.5-ultra",
+      "openai/gpt-oss-20b"
+    ]
+  }
+}

@@ -29,6 +29,14 @@ const ChatList = ({ onSelectChat, currentChatId }) => {
 
   useEffect(() => {
     fetchChats();
+    const handleTitleUpdate = (e) => {
+      const { chatId, title } = e.detail || {};
+      if (chatId && title) {
+        setChats(prev => prev.map(c => c._id === chatId ? { ...c, title } : c));
+      }
+    };
+    window.addEventListener('chat_title_updated', handleTitleUpdate);
+    return () => window.removeEventListener('chat_title_updated', handleTitleUpdate);
   }, [fetchChats]);
 
   const createChat = async () => {

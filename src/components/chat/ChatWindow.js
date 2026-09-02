@@ -1336,6 +1336,8 @@ const ChatWindow = ({ chatId }) => {
                     const filtered = prev.filter(m => m._id !== optimisticUserMsg._id);
                     return [...filtered, data.userMessage];
                   });
+                } else if (data.type === 'title_updated') {
+                  window.dispatchEvent(new CustomEvent('chat_title_updated', { detail: { chatId: data.chatId, title: data.title } }));
                 } else if (data.type === 'chunk') {
                   currentStreamText += data.text;
                   setStreamingMessage(currentStreamText);
@@ -1711,7 +1713,7 @@ const ChatWindow = ({ chatId }) => {
       </div>
 
       {/* Input Deck — floating glass console */}
-      <div className="relative p-1 lg:p-0 shrink-0">
+      <div className="relative p-1 lg:p-0 shrink-0 pb-[env(safe-area-inset-bottom,0px)] pb-2 lg:pb-0">
         <div className="max-w-5xl mx-auto">
           {/* Hidden File Input */}
           <input

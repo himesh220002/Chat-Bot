@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Activity, ChevronDown, ChevronUp, ExternalLink, Link2, BookOpen, Layers } from 'lucide-react';
+import DocumentationModal from './DocumentationModal';
 
 const INITIAL_PROBES = {
   // FAST
@@ -146,6 +147,8 @@ export default function ModelIntelDashboard() {
     return items.slice(0, 3);
   };
 
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#090d12] text-[#ece8e1] font-mono select-none">
       {/* Header */}
@@ -153,9 +156,17 @@ export default function ModelIntelDashboard() {
         <div className="flex items-center gap-2">
           <span className="valorant-header text-[16px] text-[#ff4655] tracking-wider font-bold">DASHBOARD</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[9px] tracking-widest text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-          LIVE
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsDocModalOpen(true)}
+            className="mono text-[9.5px] font-bold px-2.5 py-1 rounded bg-cyan-400/15 hover:bg-cyan-400 hover:text-black border border-cyan-400/40 text-cyan-200 transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(0,234,255,0.2)]"
+          >
+            <BookOpen size={11} /> DOCUMENTATION
+          </button>
+          <div className="flex items-center gap-1.5 text-[9px] tracking-widest text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+            LIVE
+          </div>
         </div>
       </div>
 
@@ -329,6 +340,8 @@ export default function ModelIntelDashboard() {
           <Activity size={8} className="text-cyan-400" /> Updated from session probes
         </div>
       </div>
+
+      <DocumentationModal isOpen={isDocModalOpen} onClose={() => setIsDocModalOpen(false)} />
     </div>
   );
 }
