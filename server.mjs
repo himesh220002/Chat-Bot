@@ -438,7 +438,8 @@ app.post('/api/chats/:id/messages', authenticateToken, async (req, res) => {
         chat_id: chatId,
         user_id: req.user.userId,
         message: botReply,
-        role: 'assistant'
+        role: 'assistant',
+        model: model || 'meta/llama-3.2-11b-vision-instruct'
       });
       await botMessage.save();
 

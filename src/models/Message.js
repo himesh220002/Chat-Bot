@@ -28,6 +28,9 @@ const messageSchema = new mongoose.Schema({
     height: { type: Number },
     sizeBytes: { type: Number }
   }],
+  model: {
+    type: String
+  },
   imageMeta: {
     imageId: { type: String },
     originalName: { type: String },

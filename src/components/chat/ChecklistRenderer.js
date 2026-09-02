@@ -63,25 +63,47 @@ const ChecklistRenderer = ({ raw, isStreaming }) => {
     try {
       const trimmed = String(raw).trim();
       const parseLooseJson = (str) => {
+        const input = String(str || '').trim();
+        if (!input) throw new Error('Empty JSON input');
+        
+        // 1. Direct JSON parse
+        try { return JSON.parse(input); } catch (e) {}
+
+        // 2. Extract JSON substring if surrounded by markdown or commentary
+        let cleaned = input;
+        const jsonMatch = input.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+        if (jsonMatch) cleaned = jsonMatch[0];
+
+        // 3. Direct JSON parse on extracted substring
+        try { return JSON.parse(cleaned); } catch (e) {}
+
+        // 4. Regex repairs: malformed single quotes, unquoted keys, trailing commas
         try {
-          return JSON.parse(str);
-        } catch (err) {
-          // Fix unquoted property keys like text: "abc" -> "text": "abc"
-          const repaired = str
-            .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+          const repaired = cleaned
+            .replace(/([a-zA-Z0-9_$]+)':/g, '"$1":')
+            .replace(/:\s*([^'"\r\n{}[\],]+)'\s*([,}])/g, ': "$1"$2')
+            .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"')
+            .replace(/([{,]\s*)([a-zA-Z0-9_$]+)\s*:/g, '$1"$2":')
             .replace(/,\s*([}\]])/g, '$1');
           return JSON.parse(repaired);
-        }
+        } catch (e) {}
+
+        // 5. Safe JS Object literal evaluator (handles loose object literals from LLMs)
+        try {
+          const jsRepaired = cleaned
+            .replace(/([a-zA-Z0-9_$]+)':/g, '$1:')
+            .replace(/:\s*([^'"\r\n{}[\],]+)'\s*([,}])/g, ': "$1"$2');
+          if (/^\s*[{[]/.test(jsRepaired)) {
+            // eslint-disable-next-line no-new-func
+            const parsedObj = (new Function(`"use strict"; return (${jsRepaired});`))();
+            if (parsedObj && typeof parsedObj === 'object') return parsedObj;
+          }
+        } catch (e) {}
+
+        throw new Error('Invalid JSON structure');
       };
 
-      let parsed;
-      try {
-        parsed = parseLooseJson(trimmed);
-      } catch {
-        const match = trimmed.match(/\{[\s\S]*\}/);
-        if (match) parsed = parseLooseJson(match[0]);
-        else throw new Error('Invalid JSON format');
-      }
+      const parsed = parseLooseJson(trimmed);
       // Branches
       let branches = parsed.branches || parsed.sections || parsed.categories || parsed.items || parsed.checklist || [];
       if (Array.isArray(parsed) && !branches.length) branches = parsed;
@@ -294,8 +316,8 @@ const ChecklistRenderer = ({ raw, isStreaming }) => {
   const removeGuestRow = (idx) => setGuestTableState(prev => ({ ...prev, rows: prev.rows.filter((_,i) => i!==idx) }));
 
   const handleDownload = (type) => {
-    const title = data?.title || 'checklist';
-    const filenameBase = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30) || 'checklist';
+    const title = data?.title || 'project-report';
+    const filenameBase = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'project-report';
     if (type === 'json') {
       const payload = { title: data.title, description: data.description, branches: branchesState, formFields: formFieldsState, table: guestTableState };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -304,11 +326,11 @@ const ChecklistRenderer = ({ raw, isStreaming }) => {
     } else if (type === 'markdown') {
       let md = `# ${data.title}\n${data.description ? `\n${data.description}\n` : '\n'}`;
       if (formFieldsState.length) {
-        md += `\n## Event Overview\n`;
+        md += `\n## ${data.title ? `${data.title} Overview` : 'Project Overview'}\n`;
         formFieldsState.forEach(f => { md += `- **${f.label}:** ${f.value || '_(empty)_'}\n`; });
       }
       if (guestTableState.rows.length) {
-        md += `\n## Guest Tracking Table\n`;
+        md += `\n## ${guestTableState.columns?.[0] ? `${guestTableState.columns[0]} Tracking Matrix` : 'Data Tracking Matrix'}\n`;
         md += `| ${guestTableState.columns.join(' | ')} |\n| ${guestTableState.columns.map(()=> '---').join(' | ')} |\n`;
         guestTableState.rows.forEach(r => {
           const vals = r.values.map(v => v || ' ');
@@ -438,10 +460,13 @@ const ChecklistRenderer = ({ raw, isStreaming }) => {
         <div className="p-4 bg-[#061a24] border-b border-cyan-400/10 mono text-xs text-cyan-300/40 text-center">Generating diagram...</div>
       )}
 
-      {/* Event Overview Form */}
+      {/* Project / Event Overview Form */}
       {formFieldsState.length > 0 && (
         <div className="p-4 bg-[#061a24] border-y border-cyan-400/10">
-          <h4 className="mono text-[11px] tracking-[0.18em] text-cyan-300 flex items-center gap-2 mb-3"><span className="w-6 h-6 rounded bg-cyan-400/15 border border-cyan-400/20 flex items-center justify-center"><FileText size={12} className="text-cyan-300"/></span> EVENT OVERVIEW • EDITABLE</h4>
+          <h4 className="mono text-[11px] tracking-[0.18em] text-cyan-300 flex items-center gap-2 mb-3">
+            <span className="w-6 h-6 rounded bg-cyan-400/15 border border-cyan-400/20 flex items-center justify-center"><FileText size={12} className="text-cyan-300"/></span>
+            {data.title ? `${data.title.toUpperCase()} • OVERVIEW` : 'PROJECT OVERVIEW & SPECIFICATIONS'}
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {formFieldsState.map(field => (
               <div key={field.id} className="flex flex-col gap-1.5">
@@ -458,39 +483,44 @@ const ChecklistRenderer = ({ raw, isStreaming }) => {
         </div>
       )}
 
-      {/* Guest Tracking Table */}
+      {/* Feature / Data Tracking Matrix */}
       {guestTableState && guestTableState.columns && (
         <div className="p-3 md:p-4 bg-[#0a1f2a]/50 border-y border-cyan-400/10">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="mono text-[11px] tracking-[0.18em] text-cyan-300 flex items-center gap-2"><Users size={14} className="text-cyan-400"/> GUEST TRACKING TABLE • EDITABLE</h4>
-            <span className="mono text-[10px] tracking-widest text-white/30">{guestTableState.rows.length} GUESTS</span>
+            <h4 className="mono text-[11px] tracking-[0.18em] text-cyan-300 flex items-center gap-2">
+              <Users size={14} className="text-cyan-400"/>
+              {(guestTableState.columns?.[0] ? `${guestTableState.columns[0]} TRACKING MATRIX` : 'DATA & FEATURE MATRIX').toUpperCase()} • EDITABLE
+            </h4>
+            <span className="mono text-[10px] tracking-widest text-white/40">{guestTableState.rows.length} ENTRIES</span>
           </div>
           <div className="overflow-x-auto sci-panel sci-panel-cut-sm border-cyan-400/20">
             <table className="w-full text-left border-collapse text-sm raj">
               <thead className="bg-cyan-400/10 border-b border-cyan-400/20">
                 <tr>
-                  {(guestTableState.columns || []).map((col, idx) => <th key={idx} className="p-2.5 mono text-[11px] tracking-widest text-cyan-200 whitespace-nowrap">{String(col)}</th>)}
+                  {(guestTableState.columns || []).map((col, idx) => (
+                    <th key={idx} className="p-2.5 mono text-[11px] tracking-widest text-cyan-200 whitespace-nowrap">{String(col)}</th>
+                  ))}
                   <th className="p-2.5 w-10"></th>
                 </tr>
               </thead>
               <tbody>
                 {(!guestTableState.rows || guestTableState.rows.length === 0) ? (
-                  <tr><td colSpan={(guestTableState.columns?.length || 1)+1} className="p-6 text-center mono text-xs tracking-widest text-white/20 border-t border-white/5">NO GUESTS • ADD BELOW</td></tr>
+                  <tr><td colSpan={(guestTableState.columns?.length || 1)+1} className="p-6 text-center mono text-xs tracking-widest text-white/20 border-t border-white/5">NO DATA ROWS • ADD BELOW</td></tr>
                 ) : (
                   guestTableState.rows.map((row, rIdx) => (
-                    <tr key={row.id || rIdx} className="border-t border-white/5">
+                    <tr key={row.id || rIdx} className="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
                       {(row.values || []).map((val, cIdx) => (
-                        <td key={cIdx} className="p-1.5">
+                        <td key={cIdx} className="p-1.5 min-w-[140px]">
                           <input
                             value={String(val ?? '')}
                             onChange={e => updateGuestCell(rIdx, cIdx, e.target.value)}
-                            placeholder={String(guestTableState.columns?.[cIdx] || `Col ${cIdx+1}`).slice(0, 12)}
-                            className="w-full bg-[#061a24] border border-white/10 focus:border-cyan-400/30 rounded px-2 py-1.5 mono text-xs text-white placeholder:text-white/20 outline-none"
+                            placeholder={String(guestTableState.columns?.[cIdx] || `Col ${cIdx+1}`)}
+                            className="w-full bg-[#061a24] border border-white/10 focus:border-cyan-400/40 rounded px-2.5 py-1.5 mono text-xs text-white placeholder:text-white/20 outline-none focus:bg-[#082230]"
                           />
                         </td>
                       ))}
                       <td className="p-1.5">
-                        <button onClick={() => removeGuestRow(rIdx)} className="w-7 h-7 rounded-full bg-red-500/10 hover:bg-red-500 border border-red-500/20 text-red-300 hover:text-white flex items-center justify-center cursor-pointer"><X size={12}/></button>
+                        <button onClick={() => removeGuestRow(rIdx)} className="w-7 h-7 rounded-full bg-red-500/10 hover:bg-red-500 border border-red-500/20 text-red-300 hover:text-white flex items-center justify-center cursor-pointer transition-colors" title="Delete Row"><X size={12}/></button>
                       </td>
                     </tr>
                   ))
@@ -498,7 +528,9 @@ const ChecklistRenderer = ({ raw, isStreaming }) => {
               </tbody>
             </table>
             <div className="p-2 bg-black/10 border-t border-white/5 flex justify-center">
-              <button onClick={addGuestRow} className="mono text-[11px] tracking-widest px-4 py-1.5 rounded-full bg-cyan-400/15 hover:bg-cyan-400/25 border border-cyan-400/30 text-cyan-200 flex items-center gap-1.5 cursor-pointer"><Plus size={12}/> ADD GUEST</button>
+              <button onClick={addGuestRow} className="mono text-[11px] tracking-widest px-4 py-1.5 rounded-full bg-cyan-400/15 hover:bg-cyan-400/25 border border-cyan-400/30 text-cyan-200 flex items-center gap-1.5 cursor-pointer transition-colors">
+                <Plus size={12}/> ADD ENTRY
+              </button>
             </div>
           </div>
         </div>

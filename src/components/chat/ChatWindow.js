@@ -518,12 +518,30 @@ const CodeBlock = ({ node, inline, className, children, isStreaming, ...props })
       try {
         const rawStr = String(children);
         let config;
-        try {
-          config = JSON.parse(rawStr);
-        } catch {
-          const repaired = rawStr.replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":').replace(/,\s*([}\]])/g, '$1');
-          config = JSON.parse(repaired);
-        }
+        const parseLoose = (s) => {
+          try { return JSON.parse(s); } catch (e) { }
+          const m = s.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+          const c = m ? m[0] : s;
+          try { return JSON.parse(c); } catch (e) { }
+          try {
+            const r = c
+              .replace(/([a-zA-Z0-9_$]+)':/g, '"$1":')
+              .replace(/:\s*([^'"\r\n{}[\],]+)'\s*([,}])/g, ': "$1"$2')
+              .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"')
+              .replace(/([{,]\s*)([a-zA-Z0-9_$]+)\s*:/g, '$1"$2":')
+              .replace(/,\s*([}\]])/g, '$1');
+            return JSON.parse(r);
+          } catch (e) { }
+          try {
+            const jr = c.replace(/([a-zA-Z0-9_$]+)':/g, '$1:').replace(/:\s*([^'"\r\n{}[\],]+)'\s*([,}])/g, ': "$1"$2');
+            if (/^\s*[{[]/.test(jr)) {
+              // eslint-disable-next-line no-new-func
+              return (new Function(`"use strict"; return (${jr});`))();
+            }
+          } catch (e) { }
+          return null;
+        };
+        config = parseLoose(rawStr);
         if (config && config.type && Array.isArray(config.data) && config.xAxisKey) {
           return <ChartRenderer configStr={rawStr} />;
         }
@@ -1322,12 +1340,14 @@ const ChatWindow = ({ chatId }) => {
                   currentStreamText += data.text;
                   setStreamingMessage(currentStreamText);
                 } else if (data.type === 'done') {
-                  setMessages((prev) => [...prev, data.botMessage]);
+                  const botMsg = { ...data.botMessage, model: data.botMessage?.model || selectedModel };
+                  setMessages((prev) => [...prev, botMsg]);
                   setStreamingMessage("");
                   currentStreamText = '';
                 } else if (data.type === 'error') {
                   isAbortedOrErrored = true;
-                  setMessages((prev) => [...prev, data.botMessage]);
+                  const botMsg = { ...data.botMessage, model: data.botMessage?.model || selectedModel };
+                  setMessages((prev) => [...prev, botMsg]);
                   setStreamingMessage("");
                   currentStreamText = '';
                 } else if (data.type === 'error_fatal') {
@@ -1336,6 +1356,7 @@ const ChatWindow = ({ chatId }) => {
                     _id: Date.now().toString(),
                     message: "⚠️ **Fatal Error**\n\nSomething went wrong while generating the response. This may be due to the context limit being reached or an API error. Please start a new chat.",
                     role: 'assistant',
+                    model: selectedModel,
                     createdAt: new Date().toISOString()
                   }]);
                   setStreamingMessage("");
@@ -1567,7 +1588,7 @@ const ChatWindow = ({ chatId }) => {
                     {/* Avatar – floating hologram marker */}
                     <div className={`w-8 h-8 rounded-[10px] flex-shrink-0 flex items-center justify-center border relative overflow-hidden backdrop-blur ${isUser ? "bg-cyan-400 text-black border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)]" : "bg-white/[0.06] border-white/10 text-cyan-200 shadow-[0_0_16px_rgba(0,234,255,0.12)]"
                       }`}>
-                      {isUser ? <UserIcon size={14} /> : <Bot size={14} />}
+                      {isUser ? <UserIcon size={14} /> : <Orbit size={14} className="animate-spin" style={{ animationDuration: '6s' }} />}
                       {!isUser && <span className="absolute inset-0 bg-cyan-400/8 animate-pulse" />}
                     </div>
 
@@ -1610,7 +1631,18 @@ const ChatWindow = ({ chatId }) => {
 
                       {/* msg meta */}
                       <div className={`mt-2 flex items-center gap-2 mono text-[9px] tracking-[0.14em] ${isUser ? 'text-[#00131a]/60 justify-end user-meta' : 'text-cyan-300/45'}`}>
-                        <span>{isUser ? 'PILOT • TX' : 'ORBITAL • RX'}</span>
+                        <span>{isUser ? 'PILOT • TX' : (() => {
+                          const m = msg.model || '';
+                          if (!m) return 'ORBITAL • RX';
+                          const clean = String(m).toLowerCase();
+                          if (clean.includes('qwen')) return 'ORBITAL • QWEN 2.5 CODER 7B';
+                          if (clean.includes('llava')) return 'ORBITAL • LLaVA 7B VISION';
+                          if (clean.includes('nemotron')) return 'ORBITAL • NEMOTRON 3.5 ULTRA';
+                          if (clean.includes('llama-3.2-11b') || clean.includes('vision')) return 'ORBITAL • LLAMA 3.2 11B VISION';
+                          if (clean.includes('local')) return 'ORBITAL • LOCAL OLLAMA';
+                          const shortName = String(m).replace(/^[^/]+\//, '').toUpperCase().slice(0, 24);
+                          return `ORBITAL • ${shortName || 'RX'}`;
+                        })()}</span>
                         <span className="w-1 h-1 rounded-full bg-current opacity-40" />
                         <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
@@ -1626,7 +1658,7 @@ const ChatWindow = ({ chatId }) => {
             <div className="flex justify-start animate-fade-in-up" style={{ transformStyle: 'preserve-3d' }}>
               <div className="flex max-w-[100%] lg:max-w-[90%] flex-col 2xl:flex-row w-full items-start 2xl:items-end gap-3" style={{ transformStyle: 'preserve-3d' }}>
                 <div className="w-8 h-8 rounded-[10px] bg-white/[0.06] border border-white/10 text-cyan-200 flex items-center justify-center flex-shrink-0 relative overflow-hidden backdrop-blur">
-                  <Orbit size={14} className="animate-spin" style={{ animationDuration: '6s' }} />
+                  <Bot size={14} className="animate-ping" style={{ animationDuration: '6s' }} />
                   <span className="absolute inset-0 bg-cyan-400/8 animate-pulse" />
                 </div>
                 <div className="w-full 2xl:flex-1 holo-msg sci-msg-bot px-5 py-4 min-h-[56px] flex items-start overflow-visible relative" style={{ transform: 'translateZ(0px)', contain: 'layout paint' }}>
@@ -1648,6 +1680,20 @@ const ChatWindow = ({ chatId }) => {
                   ) : (
                     <TerminalLoader />
                   )}
+                  <div className="mt-2 flex items-center gap-2 mono text-[9px] tracking-[0.14em] text-cyan-300/45">
+                    <span>{(() => {
+                      const clean = String(selectedModel || '').toLowerCase();
+                      if (clean.includes('qwen')) return 'ORBITAL • QWEN 2.5 CODER 7B';
+                      if (clean.includes('llava')) return 'ORBITAL • LLaVA 7B VISION';
+                      if (clean.includes('nemotron')) return 'ORBITAL • NEMOTRON 3.5 ULTRA';
+                      if (clean.includes('llama-3.2-11b') || clean.includes('vision')) return 'ORBITAL • LLAMA 3.2 11B VISION';
+                      if (clean.includes('local')) return 'ORBITAL • LOCAL OLLAMA';
+                      const shortName = String(selectedModel || '').replace(/^[^/]+\//, '').toUpperCase().slice(0, 24);
+                      return `ORBITAL • ${shortName || 'RX'}`;
+                    })()}</span>
+                    <span className="w-1 h-1 rounded-full bg-cyan-400 animate-ping" />
+                    <span>GENERATING...</span>
+                  </div>
                 </div>
               </div>
             </div>
