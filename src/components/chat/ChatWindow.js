@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, Cpu, Radio, Activity, ShieldCheck, Orbit, Sparkles, Terminal, Crosshair, Paperclip, Image as ImageIcon, X, AlertCircle, Home, FileText, FileJson, Plus, BookOpen, ExternalLink, Link2 } from "lucide-react";
+import { Send, Loader2, Bot, User as UserIcon, ChevronDown, Copy, Check, ZoomIn, Cpu, Radio, Activity, ShieldCheck, Orbit, Sparkles, Terminal, Crosshair, Paperclip, Image as ImageIcon, X, AlertCircle, Home, FileText, FileJson, Plus } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -20,39 +20,104 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000/api";
 const extractResourcesFromMessages = (messages) => {
   const resources = [];
   const seen = new Set();
+  const inferTags = (url, label, section) => {
+    const tags = [];
+    const u = url.toLowerCase();
+    const l = (label + ' ' + (section || '')).toLowerCase();
+    if (u.includes('github.com')) tags.push('CODE');
+    else if (u.includes('amazon')) tags.push('SHOP');
+    else if (u.includes('nostarch')) tags.push('PUBLISHER');
+    else if (u.includes('oreilly')) tags.push('PUBLISHER');
+    else if (l.includes('official site') || l.includes('free to read')) tags.push('FREE');
+    else if (l.includes('publisher')) tags.push('PUBLISHER');
+    else if (l.includes('author') || l.includes('github')) tags.push('AUTHOR');
+    else if (l.includes('shop') || l.includes('buy')) tags.push('SHOP');
+    else tags.push('RESOURCE');
+    if (tags.length < 2) {
+      if (section && /python|ai|book/i.test(section) && !tags.includes('BOOK')) tags.push('BOOK');
+      else if (u.includes('automatetheboringstuff')) tags.push('FREE');
+    }
+    return tags.slice(0, 2);
+  };
+  const cleanSection = (s) => String(s).replace(/^[#\d.\s*]+/, '').replace(/[*_`"'`]+/g, '').replace(/\s*\(by\s+[^)]+\)$/i, '').replace(/\s*-\s*[A-Za-z].*$/, '').trim().slice(0, 40);
   messages.forEach(msg => {
     if (msg.role !== 'assistant') return;
     const text = msg.message || '';
-    // Markdown links [title](url)
-    const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g;
-    let m;
-    while ((m = mdLinkRegex.exec(text)) !== null) {
-      const title = m[1].trim().slice(0, 80);
-      const url = m[2].trim().replace(/[.,;!?]+$/, '');
-      if (!seen.has(url)) {
+    const lines = text.split('\n');
+    let currentSection = '';
+    lines.forEach(line => {
+      const raw = line.trim();
+      const mNum = raw.match(/^\s*\d+\.\s+(.+)/);
+      if (mNum) {
+        let t = mNum[1].replace(/^[*"`']+|[*"`']+$/g, '').trim();
+        t = t.split(' - ')[0].split(' (by')[0].replace(/[*_`"'`]+/g, '').trim();
+        if (t.length > 5) currentSection = cleanSection(t);
+      } else if (/^#{1,3}\s+/.test(raw)) {
+        currentSection = cleanSection(raw.replace(/^#+\s+/, ''));
+      }
+      // Markdown links in this line
+      const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+      let m;
+      while ((m = mdLinkRegex.exec(line)) !== null) {
+        let linkText = m[1].trim();
+        const url = m[2].trim().replace(/[.,;!?]+$/, '');
+        if (seen.has(url)) continue;
         seen.add(url);
         try {
           const domain = new URL(url).hostname.replace(/^www\./, '');
-          resources.push({ title: title || domain, url, domain, msgId: msg._id, snippet: title.slice(0, 60), type: 'MD_LINK' });
-        } catch {}
+          let displayTitle = linkText;
+          let snippet = '';
+          // If linkText is a URL, use preceding label or section as name
+          if (/^https?:\/\//.test(linkText)) {
+            const prefix = line.split(url)[0] || line;
+            const labelMatch = prefix.match(/([A-Za-z][A-Za-z\s()/-]+):\s*[^:]*$/);
+            const label = labelMatch ? labelMatch[1].trim() : '';
+            const sec = currentSection || '';
+            displayTitle = label ? `${sec ? sec + ' • ' : ''}${label}` : (sec || domain);
+            snippet = label && label.toLowerCase().includes('free') ? 'Free to read online' : (sec ? `About ${sec}` : `Visit ${domain}`);
+          } else {
+            snippet = currentSection ? `From ${currentSection}` : `Resource • ${domain}`;
+            // Try to get Best for line nearby
+            const bestIdx = lines.indexOf(line);
+            const nextLine = lines[bestIdx + 1] || '';
+            const bestMatch = nextLine.match(/Best for:\s*(.+)/i) || line.match(/Best for:\s*(.+)/i);
+            if (bestMatch) snippet = bestMatch[1].trim().slice(0, 80);
+          }
+          displayTitle = displayTitle.replace(/^\d+\.\s*/, '').replace(/^["'`]+|["'`]+$/g, '').trim();
+          if (displayTitle.includes('•')) {
+            const p = displayTitle.split('•');
+            const secP = cleanSection(p[0]);
+            let labP = p[1].trim().split('(')[0].trim().replace(/^["'`]+|["'`]+$/g, '');
+            displayTitle = labP ? `${secP} • ${labP}` : secP;
+          } else {
+            displayTitle = displayTitle.split('(')[0].trim();
+          }
+          displayTitle = displayTitle.replace(/\s+/g, ' ').trim().slice(0, 48);
+          const tags = inferTags(url, displayTitle, currentSection);
+          resources.push({ title: displayTitle || domain, url, domain, msgId: msg._id, snippet: snippet.slice(0, 80), tags, type: tags[0] });
+        } catch { }
       }
-    }
-    // Bare URLs
-    const bareRegex = /https?:\/\/[^\s\)\]]+/g;
-    let bareMatch;
-    const bareMatches = text.match(bareRegex) || [];
-    // Use while to avoid double count, but already seen check
-    bareMatches.forEach(raw => {
-      const url = raw.trim().replace(/[.,;!?]+$/, '').replace(/\)$/, '');
-      if (!seen.has(url)) {
+      // Bare URLs not in markdown
+      const bareRegex = /(?<!\]\()https?:\/\/[^\s)\]]+/g;
+      const bareMatches = line.match(bareRegex) || [];
+      bareMatches.forEach(rawUrl => {
+        const url = rawUrl.trim().replace(/[.,;!?]+$/, '').replace(/\)$/, '');
+        if (seen.has(url)) return;
+        // Skip if already captured as markdown on same line (check if url was in md link)
+        if (line.includes(`](${url}`)) return;
         seen.add(url);
-        // avoid if already part of md link
         try {
           const domain = new URL(url).hostname.replace(/^www\./, '');
-          // skip if domain is same as already added markdown link domain + title duplicate
-          resources.push({ title: domain, url, domain, msgId: msg._id, snippet: '', type: 'URL' });
-        } catch {}
-      }
+          const prefix = line.split(url)[0] || '';
+          const labelMatch = prefix.match(/([A-Za-z][A-Za-z\s()/-]+):\s*[^:]*$/);
+          const label = labelMatch ? labelMatch[1].trim() : currentSection || domain;
+          let dispTitle = currentSection ? `${cleanSection(currentSection)} • ${label.split('(')[0].trim()}` : label;
+          dispTitle = dispTitle.replace(/^\d+\.\s*/, '').replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, ' ').trim().slice(0, 48);
+          const snippet = /free/i.test(label) ? 'Free to read online' : (currentSection ? `About ${cleanSection(currentSection)}` : `Visit ${domain}`);
+          const tags = inferTags(url, dispTitle, currentSection);
+          resources.push({ title: dispTitle || domain, url, domain, msgId: msg._id, snippet: snippet.slice(0, 80), tags, type: tags[0] });
+        } catch { }
+      });
     });
   });
   return resources;
@@ -524,7 +589,7 @@ const InteractiveTaskItem = ({ node, children, ...props }) => {
     if (React.isValidElement(child) && child.type === 'input') return false;
     return true;
   });
-  const taskText = content.map(c => typeof c === 'string' ? c : (c?.props?.children ? String(c.props.children).replace(/\n/g,' ') : '')).join('').trim().slice(0,120);
+  const taskText = content.map(c => typeof c === 'string' ? c : (c?.props?.children ? String(c.props.children).replace(/\n/g, ' ') : '')).join('').trim().slice(0, 120);
   return (
     <li
       onClick={() => setChecked(!checked)}
@@ -579,7 +644,7 @@ const AssistantMessageActions = ({ message }) => {
         liveSection += `\n## ✅ Edited Checklist (Live State)\n`;
         taskLis.forEach(li => {
           const checked = li.getAttribute('data-checked') === 'true';
-          const text = li.getAttribute('data-task-text') || li.textContent.trim().replace(/\n/g,' ').slice(0,120);
+          const text = li.getAttribute('data-task-text') || li.textContent.trim().replace(/\n/g, ' ').slice(0, 120);
           liveSection += `- [${checked ? 'x' : ' '}] ${text}\n`;
         });
       }
@@ -611,9 +676,9 @@ const AssistantMessageActions = ({ message }) => {
     if (bubble) {
       const formInputs = bubble.querySelectorAll('input[data-form-field]');
       const formData = {};
-      formInputs.forEach(inp => { const k = inp.getAttribute('data-form-field')?.replace(':','').trim(); if (k) formData[k] = inp.value; });
+      formInputs.forEach(inp => { const k = inp.getAttribute('data-form-field')?.replace(':', '').trim(); if (k) formData[k] = inp.value; });
       const taskLis = bubble.querySelectorAll('li[data-checked]');
-      const checklist = Array.from(taskLis).map(li => ({ text: li.getAttribute('data-task-text') || li.textContent.trim().slice(0,120), checked: li.getAttribute('data-checked')==='true' }));
+      const checklist = Array.from(taskLis).map(li => ({ text: li.getAttribute('data-task-text') || li.textContent.trim().slice(0, 120), checked: li.getAttribute('data-checked') === 'true' }));
       const guestRows = [];
       const guestTable = bubble.querySelector('[data-editable-guest-table]');
       if (guestTable) {
@@ -621,7 +686,7 @@ const AssistantMessageActions = ({ message }) => {
           const inputs = tr.querySelectorAll('input[data-guest-field]');
           if (inputs.length) {
             const vals = Array.from(inputs).map(i => i.value.trim());
-            if (vals.some(v=>v)) guestRows.push({ guestName: vals[0]||'', category: vals[1]||'', rsvp: vals[2]||'', meal: vals[3]||'', notes: vals[4]||'' });
+            if (vals.some(v => v)) guestRows.push({ guestName: vals[0] || '', category: vals[1] || '', rsvp: vals[2] || '', meal: vals[3] || '', notes: vals[4] || '' });
           }
         });
       }
@@ -644,9 +709,9 @@ const AssistantMessageActions = ({ message }) => {
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2 p-2.5 rounded-[10px] bg-white/[0.04] border border-cyan-400/10">
       <span className="mono text-[9px] tracking-[0.16em] text-cyan-300/50">CHECKLIST ACTIONS:</span>
-      <button onClick={handleCopy} className="mono text-[10px] tracking-widest px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-white/70 hover:text-cyan-200 flex items-center gap-1.5 cursor-pointer transition-colors"><Copy size={12}/> COPY</button>
-      <button onClick={handleDownloadMD} className="mono text-[10px] tracking-widest px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-white/70 hover:text-cyan-200 flex items-center gap-1.5 cursor-pointer transition-colors"><FileText size={12}/> DOWNLOAD MD (LIVE)</button>
-      <button onClick={handleDownloadJSON} className="mono text-[10px] tracking-widest px-3 py-1.5 rounded-full bg-cyan-400/15 hover:bg-cyan-400/25 border border-cyan-400/30 text-cyan-200 flex items-center gap-1.5 cursor-pointer transition-colors"><FileJson size={12}/> DOWNLOAD JSON (LIVE)</button>
+      <button onClick={handleCopy} className="mono text-[10px] tracking-widest px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-white/70 hover:text-cyan-200 flex items-center gap-1.5 cursor-pointer transition-colors"><Copy size={12} /> COPY</button>
+      <button onClick={handleDownloadMD} className="mono text-[10px] tracking-widest px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-cyan-500/15 border border-white/10 hover:border-cyan-400/30 text-white/70 hover:text-cyan-200 flex items-center gap-1.5 cursor-pointer transition-colors"><FileText size={12} /> DOWNLOAD MD (LIVE)</button>
+      <button onClick={handleDownloadJSON} className="mono text-[10px] tracking-widest px-3 py-1.5 rounded-full bg-cyan-400/15 hover:bg-cyan-400/25 border border-cyan-400/30 text-cyan-200 flex items-center gap-1.5 cursor-pointer transition-colors"><FileJson size={12} /> DOWNLOAD JSON (LIVE)</button>
     </div>
   );
 };
@@ -672,8 +737,8 @@ const EditableGuestTable = (props) => {
   const columns = ["Guest Name", "Category", "RSVP Status", "Meal Preference", "Notes"];
   const [rows, setRows] = useState([]);
   const addRow = () => setRows(prev => [...prev, { id: Date.now() + Math.random(), values: Array(columns.length).fill('') }]);
-  const updateCell = (rowIdx, colIdx, val) => setRows(prev => prev.map((r,i) => i===rowIdx ? { ...r, values: r.values.map((v,j) => j===colIdx ? val : v) } : r));
-  const removeRow = (rowIdx) => setRows(prev => prev.filter((_,i) => i!==rowIdx));
+  const updateCell = (rowIdx, colIdx, val) => setRows(prev => prev.map((r, i) => i === rowIdx ? { ...r, values: r.values.map((v, j) => j === colIdx ? val : v) } : r));
+  const removeRow = (rowIdx) => setRows(prev => prev.filter((_, i) => i !== rowIdx));
   return (
     <div className="overflow-x-auto mb-4 sci-panel sci-panel-cut-sm border-cyan-400/20" data-editable-guest-table>
       <table className="w-full text-left border-collapse text-sm raj">
@@ -685,7 +750,7 @@ const EditableGuestTable = (props) => {
         </thead>
         <tbody>
           {rows.length === 0 ? (
-            <tr><td colSpan={columns.length+1} className="p-6 text-center mono text-xs tracking-widest text-white/20 border-t border-white/5">NO GUESTS • ADD BELOW</td></tr>
+            <tr><td colSpan={columns.length + 1} className="p-6 text-center mono text-xs tracking-widest text-white/20 border-t border-white/5">NO GUESTS • ADD BELOW</td></tr>
           ) : (
             rows.map((row, rIdx) => (
               <tr key={row.id} className="border-t border-white/5">
@@ -695,13 +760,13 @@ const EditableGuestTable = (props) => {
                       data-guest-field={`${rIdx}-${cIdx}`}
                       value={val}
                       onChange={e => updateCell(rIdx, cIdx, e.target.value)}
-                      placeholder={columns[cIdx].slice(0,6)}
+                      placeholder={columns[cIdx].slice(0, 6)}
                       className="w-full bg-[#061a24] border border-white/10 focus:border-cyan-400/30 rounded px-2 py-1.5 mono text-xs text-white placeholder:text-white/20 outline-none"
                     />
                   </td>
                 ))}
                 <td className="p-1.5">
-                  <button onClick={() => removeRow(rIdx)} className="w-7 h-7 rounded-full bg-red-500/10 hover:bg-red-500 border border-red-500/20 text-red-300 hover:text-white flex items-center justify-center cursor-pointer"><X size={12}/></button>
+                  <button onClick={() => removeRow(rIdx)} className="w-7 h-7 rounded-full bg-red-500/10 hover:bg-red-500 border border-red-500/20 text-red-300 hover:text-white flex items-center justify-center cursor-pointer"><X size={12} /></button>
                 </td>
               </tr>
             ))
@@ -709,7 +774,7 @@ const EditableGuestTable = (props) => {
         </tbody>
       </table>
       <div className="p-2 bg-black/10 border-t border-white/5 flex justify-center">
-        <button onClick={addRow} className="mono text-[11px] tracking-widest px-4 py-1.5 rounded-full bg-cyan-400/15 hover:bg-cyan-400/25 border border-cyan-400/30 text-cyan-200 flex items-center gap-1.5 cursor-pointer"><Plus size={12}/> ADD GUEST</button>
+        <button onClick={addRow} className="mono text-[11px] tracking-widest px-4 py-1.5 rounded-full bg-cyan-400/15 hover:bg-cyan-400/25 border border-cyan-400/30 text-cyan-200 flex items-center gap-1.5 cursor-pointer"><Plus size={12} /> ADD GUEST</button>
       </div>
     </div>
   );
@@ -760,7 +825,7 @@ const MarkdownComponents = {
       if (/guest\s*name/i.test(headerText) || /rsvp/i.test(headerText) || /meal/i.test(headerText) || /category/i.test(headerText)) {
         return <EditableGuestTable {...props} />;
       }
-    } catch {}
+    } catch { }
     // Fallback: treat any table with 4+ columns as editable guest-like if previous heading was Guest Tracking
     return <div className="overflow-x-auto mb-4 sci-panel sci-panel-cut-sm border-cyan-400/20"><table className="w-full text-left border-collapse text-sm raj" {...props} /></div>;
   },
@@ -1339,7 +1404,7 @@ const ChatWindow = ({ chatId }) => {
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0">
       {/* Header – floating glass command bar */}
-      <div className="relative z-40 px-3 lg:px-5 lg:py-3 border-b border-white/20 bg-gradient-to-r from-white/[0.04] via-transparent to-white/[0.02] backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0 rounded-t-[22px]">
+      <div className="relative z-40 px-3 lg:px-5 lg:py-1 border-b border-white/20 bg-gradient-to-r from-white/[0.04] via-transparent to-white/[0.02] backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-3 shrink-0 rounded-t-[22px]">
         <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <div className="flex items-center gap-4 min-w-0">
           <div className="hidden lg:flex w-10 h-10 rounded-[12px] bg-cyan-400/15 border border-white/10 items-center justify-center backdrop-blur">
@@ -1491,16 +1556,16 @@ const ChatWindow = ({ chatId }) => {
               const isUser = msg.role === 'user';
               return (
                 <div key={msg._id || index} data-message-id={msg._id} data-role={msg.role} className={`flex ${isUser ? "justify-end" : "justify-start"} gap-4 items-start animate-fade-in-up`} style={{ transformStyle: 'preserve-3d' }}>
-                  <div className={`flex-1 min-w-0 flex ${isUser ? "max-w-[100%] lg:max-w-[90%] flex-col 2xl:flex-row-reverse items-end ml-auto" : "max-w-[100%] lg:max-w-[90%] flex-col 2xl:flex-row w-full items-start 2xl:items-end"} gap-3 `} style={{ transformStyle: 'preserve-3d' }}>
+                  <div className={` min-w-0 flex ${isUser ? "max-w-[100%] lg:max-w-[90%] flex-col 2xl:flex-row-reverse items-end ml-auto" : "max-w-[100%] lg:max-w-[90%] flex-col 2xl:flex-row w-full items-start 2xl:items-end"} gap-3 `} style={{ transformStyle: 'preserve-3d' }}>
                     {/* Avatar – floating hologram marker */}
                     <div className={`w-8 h-8 rounded-[10px] flex-shrink-0 flex items-center justify-center border relative overflow-hidden backdrop-blur ${isUser ? "bg-cyan-400 text-black border-cyan-300 shadow-[0_0_16px_rgba(0,234,255,0.5)]" : "bg-white/[0.06] border-white/10 text-cyan-200 shadow-[0_0_16px_rgba(0,234,255,0.12)]"
                       }`}>
-                      {isUser ? <UserIcon size={14} /> : <Orbit size={14} className="animate-spin" style={{ animationDuration: '6s' }} />}
+                      {isUser ? <UserIcon size={14} /> : <Bot size={14} />}
                       {!isUser && <span className="absolute inset-0 bg-cyan-400/8 animate-pulse" />}
                     </div>
 
                     {/* Message Bubble — responsive sharp */}
-                    <div data-index={index % 4} className={`holo-msg relative w-full 2xl:flex-1 px-3 lg:px-5 py-2.5 lg:py-3.5 leading-relaxed text-[12.5px] lg:text-[14.5px] overflow-auto max-w-full min-w-0
+                    <div data-index={index % 4} className={`holo-msg relative w-fit max-w-full px-3 lg:px-5 py-2.5 lg:py-3.5 leading-relaxed text-[12.5px] lg:text-[14.5px] overflow-auto min-w-0
                       ${isUser
                         ? "sci-msg-user raj font-medium holo-msg-user"
                         : "sci-msg-bot"
@@ -1544,30 +1609,7 @@ const ChatWindow = ({ chatId }) => {
                       </div>
                     </div>
                   </div>
-                  {!isUser && (() => {
-                    const inlineRes = extractResourcesFromMessages([msg]);
-                    if (!inlineRes.length) return null;
-                    return (
-                      <div className="hidden xl:block w-[280px] shrink-0">
-                        <div className="sticky top-4 space-y-2">
-                          <div className="mono text-[9px] tracking-[0.18em] text-amber-300/60 flex items-center gap-1.5 mb-1">
-                            <BookOpen size={10} /> RESOURCES • STICKY
-                          </div>
-                          {inlineRes.map((res, rIdx) => (
-                            <a key={`${res.url}-${rIdx}`} href={res.url} target="_blank" rel="noopener noreferrer" className="group block bg-[#0e1620] border border-white/[0.06] hover:border-amber-400/20 p-2.5" style={{ clipPath: 'polygon(6px 0,100% 0,100% calc(100% - 6px), calc(100% - 6px) 100%,0 100%,0 6px)' }}>
-                              <div className="flex items-start gap-2">
-                                <img src={`https://www.google.com/s2/favicons?domain=${res.domain}&sz=32`} alt="" className="w-5 h-5 rounded bg-white/10 border border-white/10 shrink-0 mt-0.5" onError={(e)=>{e.currentTarget.style.display='none'}} />
-                                <div className="flex-1 min-w-0">
-                                  <div className="display text-[11px] font-bold text-white group-hover:text-amber-300 leading-tight line-clamp-2 flex items-center gap-1">{res.title || res.domain} <ExternalLink size={10} className="text-white/30 shrink-0" /></div>
-                                  <div className="mono text-[9px] tracking-wide text-cyan-300/50 truncate">{res.domain}</div>
-                                </div>
-                              </div>
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
+
                 </div>
               );
             })
@@ -1577,7 +1619,7 @@ const ChatWindow = ({ chatId }) => {
             <div className="flex justify-start animate-fade-in-up" style={{ transformStyle: 'preserve-3d' }}>
               <div className="flex max-w-[100%] lg:max-w-[90%] flex-col 2xl:flex-row w-full items-start 2xl:items-end gap-3" style={{ transformStyle: 'preserve-3d' }}>
                 <div className="w-8 h-8 rounded-[10px] bg-white/[0.06] border border-white/10 text-cyan-200 flex items-center justify-center flex-shrink-0 relative overflow-hidden backdrop-blur">
-                  <Bot size={14} />
+                  <Orbit size={14} className="animate-spin" style={{ animationDuration: '6s' }} />
                   <span className="absolute inset-0 bg-cyan-400/8 animate-pulse" />
                 </div>
                 <div className="w-full 2xl:flex-1 holo-msg sci-msg-bot px-5 py-4 min-h-[56px] flex items-start overflow-visible relative" style={{ transform: 'translateZ(0px)', contain: 'layout paint' }}>

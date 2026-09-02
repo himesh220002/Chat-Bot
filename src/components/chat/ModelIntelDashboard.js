@@ -89,7 +89,7 @@ export default function ModelIntelDashboard() {
 
         try {
           localStorage.setItem("cypher_model_telemetry", JSON.stringify(next));
-        } catch {}
+        } catch { }
         return next;
       });
     };
@@ -166,8 +166,8 @@ export default function ModelIntelDashboard() {
           className="w-full px-4 pt-3 pb-2 flex items-center justify-between hover:bg-white/[0.03] transition-colors"
         >
           <div className="text-[10px] tracking-[0.2em] font-bold text-cyan-400 flex items-center gap-2">
-            <span>MODEL INTEL // TOP-3</span>
-            <div className="hidden sm:block flex-1 h-px bg-gradient-to-r from-cyan-500/40 to-transparent w-12 ml-2" />
+            <span>MODEL INTEL //</span>
+            <div className="hidden sm:block flex-1 h-px bg-gradient-to-r from-cyan-500/40 to-transparent w-5 ml-2" />
             {resources.length > 0 && !isModelIntelOpen && (
               <span className="text-[8px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">+{resources.length} RES</span>
             )}
@@ -285,14 +285,16 @@ export default function ModelIntelDashboard() {
                                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                 />
                                 <div className="flex-1 min-w-0">
-                                  <a href={res.url} target="_blank" rel="noopener noreferrer" className="display text-[11px] font-bold text-white hover:text-amber-300 leading-tight line-clamp-2 flex items-center gap-1">
-                                    {res.title || res.domain}
+                                  <div className="mono text-[10px] font-bold text-white truncate leading-tight" title={res.title}>{res.title || res.domain}</div>
+                                  <a href={res.url} target="_blank" rel="noopener noreferrer" className="mono text-[9px] tracking-wide text-cyan-400 hover:text-cyan-300 truncate flex items-center gap-1 mt-0.5" title={res.url}>
+                                    <span className="truncate">{res.url}</span>
                                     <ExternalLink size={10} className="text-white/30 group-hover:text-amber-400 shrink-0" />
                                   </a>
-                                  <p className="mono text-[9px] tracking-wide text-cyan-300/60 truncate mt-0.5">{res.domain}</p>
                                   {res.snippet && <p className="raj text-[11px] leading-snug text-white/50 mt-1 line-clamp-2">{res.snippet}</p>}
-                                  <div className="flex items-center gap-2 mt-1.5">
-                                    <span className="mono text-[8px] tracking-widest px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-white/30">{res.type || 'LINK'}</span>
+                                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                    {(res.tags || [res.type || 'LINK']).slice(0, 2).map(tag => (
+                                      <span key={tag} className="mono text-[7px] tracking-[0.12em] px-1.5 py-0.5 rounded bg-gray-400/10 border border-gray-400/20 text-gray-100">{tag}</span>
+                                    ))}
                                   </div>
                                 </div>
                               </div>

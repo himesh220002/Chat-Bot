@@ -126,7 +126,7 @@ function App() {
                         </div>
                         <div>
                           <h2 className="valorant-header text-[18px] tracking-[0.06em] valorant-beige leading-none">&gt;_ INPUT<span className="valorant-accent">CHAT</span></h2>
-                          <p className="valorant-label text-[10px] tracking-[0.16em] text-[#ece8e1]/60 mt-1 flex items-center gap-1.5"><Radio size={10} className="text-[#ff4655]" /> COCKPIT • MK-VII</p>
+                          <p className="valorant-label text-[10px] tracking-[0.16em] text-[#ece8e1]/60 mt-1 flex items-center gap-1.5"><Radio size={10} className="text-[#ff4655]" /> REDZONE • MK-XIV</p>
                         </div>
                       </div>
                       <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden w-8 h-8 bg-[#1a242e] border border-white/10 flex items-center justify-center text-white hover:bg-[#ff4655]/20 transition-colors" style={{ clipPath: 'polygon(5px 0,100% 0,100% calc(100% - 5px), calc(100% - 5px) 100%,0 100%,0 5px)' }}>
