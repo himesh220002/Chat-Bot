@@ -57,18 +57,30 @@ const ChecklistRenderer = ({ raw, isStreaming }) => {
   const [copied, setCopied] = useState(false);
   const mermaidIdRef = useRef(`chk-mermaid-${Math.random().toString(36).substr(2,9)}`);
 
-  // Parse JSON
+  // Parse JSON with auto-repair for unquoted keys (e.g. text: "val" instead of "text": "val")
   useEffect(() => {
     if (isStreaming) return;
     try {
       const trimmed = String(raw).trim();
+      const parseLooseJson = (str) => {
+        try {
+          return JSON.parse(str);
+        } catch (err) {
+          // Fix unquoted property keys like text: "abc" -> "text": "abc"
+          const repaired = str
+            .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+            .replace(/,\s*([}\]])/g, '$1');
+          return JSON.parse(repaired);
+        }
+      };
+
       let parsed;
       try {
-        parsed = JSON.parse(trimmed);
+        parsed = parseLooseJson(trimmed);
       } catch {
         const match = trimmed.match(/\{[\s\S]*\}/);
-        if (match) parsed = JSON.parse(match[0]);
-        else throw new Error('Invalid JSON');
+        if (match) parsed = parseLooseJson(match[0]);
+        else throw new Error('Invalid JSON format');
       }
       // Branches
       let branches = parsed.branches || parsed.sections || parsed.categories || parsed.items || parsed.checklist || [];
@@ -103,22 +115,42 @@ const ChecklistRenderer = ({ raw, isStreaming }) => {
         if (typeof f === 'string') return { id: `field-${i}`, label: f, value: '' };
         return { id: f.id || `field-${i}`, label: f.label || f.name || f.key || `Field ${i+1}`, value: f.value || f.default || '', placeholder: f.placeholder || '' };
       });
-      // Guest table
+      // Table normalization
       let table = parsed.table || parsed.guestTable || parsed.guestTracking || parsed.guestsTable || null;
       let normalizedTable = { columns: ["Guest Name","Category","RSVP Status","Meal Preference","Notes"], rows: [] };
       if (table) {
         if (Array.isArray(table)) {
-          // array of rows
-          normalizedTable.rows = table.map((r, idx) => ({ id: r.id || `row-${idx}`, values: [r.name||r.guestName||'', r.category||'', r.rsvp||r.status||'', r.meal||r.mealPreference||'', r.notes||''] }));
+          if (table.length > 0 && typeof table[0] === 'object' && table[0] !== null) {
+            const keys = Object.keys(table[0]).filter(k => k !== 'id');
+            if (keys.length > 0) {
+              normalizedTable.columns = keys.map(k => k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+            }
+          }
+          normalizedTable.rows = table.map((r, idx) => {
+            if (typeof r === 'object' && r !== null) {
+              const vals = Object.keys(r).filter(k => k !== 'id').map(k => String(r[k] ?? ''));
+              return { id: r.id || `row-${idx}`, values: vals };
+            }
+            return { id: `row-${idx}`, values: [String(r)] };
+          });
         } else if (table.columns && table.rows) {
-          normalizedTable.columns = table.columns;
-          normalizedTable.rows = table.rows.map((r, idx) => {
-            if (Array.isArray(r)) return { id: `row-${idx}`, values: r };
-            if (typeof r === 'object') return { id: r.id || `row-${idx}`, values: [r.name||'', r.category||'', r.rsvp||'', r.meal||'', r.notes||''] };
+          const cols = Array.isArray(table.columns) ? table.columns.map(c => String(c)) : ["Col 1"];
+          normalizedTable.columns = cols;
+          normalizedTable.rows = (Array.isArray(table.rows) ? table.rows : []).map((r, idx) => {
+            if (Array.isArray(r)) return { id: `row-${idx}`, values: r.map(v => String(v ?? '')) };
+            if (typeof r === 'object' && r !== null) {
+              const keys = Object.keys(r);
+              const vals = cols.map(col => {
+                const colClean = col.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const matchedKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === colClean);
+                return matchedKey ? String(r[matchedKey] ?? '') : '';
+              });
+              return { id: r.id || `row-${idx}`, values: vals };
+            }
             return { id: `row-${idx}`, values: [String(r)] };
           });
         } else if (table.rows) {
-          normalizedTable.rows = table.rows.map((r, idx) => ({ id: `row-${idx}`, values: Array.isArray(r) ? r : [String(r)] }));
+          normalizedTable.rows = (Array.isArray(table.rows) ? table.rows : []).map((r, idx) => ({ id: `row-${idx}`, values: Array.isArray(r) ? r.map(v => String(v ?? '')) : [String(r)] }));
         }
       }
       const finalData = {
@@ -437,22 +469,22 @@ const ChecklistRenderer = ({ raw, isStreaming }) => {
             <table className="w-full text-left border-collapse text-sm raj">
               <thead className="bg-cyan-400/10 border-b border-cyan-400/20">
                 <tr>
-                  {guestTableState.columns.map(col => <th key={col} className="p-2.5 mono text-[11px] tracking-widest text-cyan-200 whitespace-nowrap">{col}</th>)}
+                  {(guestTableState.columns || []).map((col, idx) => <th key={idx} className="p-2.5 mono text-[11px] tracking-widest text-cyan-200 whitespace-nowrap">{String(col)}</th>)}
                   <th className="p-2.5 w-10"></th>
                 </tr>
               </thead>
               <tbody>
-                {guestTableState.rows.length === 0 ? (
-                  <tr><td colSpan={guestTableState.columns.length+1} className="p-6 text-center mono text-xs tracking-widest text-white/20 border-t border-white/5">NO GUESTS • ADD BELOW</td></tr>
+                {(!guestTableState.rows || guestTableState.rows.length === 0) ? (
+                  <tr><td colSpan={(guestTableState.columns?.length || 1)+1} className="p-6 text-center mono text-xs tracking-widest text-white/20 border-t border-white/5">NO GUESTS • ADD BELOW</td></tr>
                 ) : (
                   guestTableState.rows.map((row, rIdx) => (
-                    <tr key={row.id} className="border-t border-white/5">
-                      {row.values.map((val, cIdx) => (
+                    <tr key={row.id || rIdx} className="border-t border-white/5">
+                      {(row.values || []).map((val, cIdx) => (
                         <td key={cIdx} className="p-1.5">
                           <input
-                            value={val}
+                            value={String(val ?? '')}
                             onChange={e => updateGuestCell(rIdx, cIdx, e.target.value)}
-                            placeholder={guestTableState.columns[cIdx].slice(0,8)}
+                            placeholder={String(guestTableState.columns?.[cIdx] || `Col ${cIdx+1}`).slice(0, 12)}
                             className="w-full bg-[#061a24] border border-white/10 focus:border-cyan-400/30 rounded px-2 py-1.5 mono text-xs text-white placeholder:text-white/20 outline-none"
                           />
                         </td>

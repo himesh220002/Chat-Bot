@@ -516,13 +516,20 @@ const CodeBlock = ({ node, inline, className, children, isStreaming, ...props })
   if (!inline && match && (match[1] === 'recharts' || match[1] === 'json')) {
     if (match[1] === 'json') {
       try {
-        const config = JSON.parse(String(children));
+        const rawStr = String(children);
+        let config;
+        try {
+          config = JSON.parse(rawStr);
+        } catch {
+          const repaired = rawStr.replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":').replace(/,\s*([}\]])/g, '$1');
+          config = JSON.parse(repaired);
+        }
         if (config && config.type && Array.isArray(config.data) && config.xAxisKey) {
-          return <ChartRenderer configStr={String(children)} />;
+          return <ChartRenderer configStr={rawStr} />;
         }
         // Auto-detect checklist/report JSON in generic json block
         if (config && (config.branches || config.sections || config.categories || config.checklist)) {
-          return <ChecklistRenderer raw={String(children)} isStreaming={isStreaming} />;
+          return <ChecklistRenderer raw={rawStr} isStreaming={isStreaming} />;
         }
       } catch (e) { }
     } else {
@@ -530,7 +537,7 @@ const CodeBlock = ({ node, inline, className, children, isStreaming, ...props })
     }
   }
   if (!inline && match) {
-    if (['checklist', 'report', 'form', 'todo'].includes(match[1].toLowerCase())) {
+    if (['checklist', 'form', 'todo'].includes(match[1].toLowerCase())) {
       return <ChecklistRenderer raw={String(children)} isStreaming={isStreaming} />;
     }
     if (match[1].toLowerCase() === 'mermaid') {
